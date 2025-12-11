@@ -1,33 +1,27 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { 
   Camera, 
   ChefHat, 
   Target, 
   Timer, 
-  Droplets,
-  ImageIcon,
-  Utensils,
+  User,
   Home
 } from "lucide-react";
-
-const navItems = [
-  { path: "/", icon: Home, label: "Início" },
-  { path: "/scanner", icon: Camera, label: "Scanner" },
-  { path: "/recipes", icon: ChefHat, label: "Receitas" },
-  { path: "/missions", icon: Target, label: "Missões" },
-  { path: "/fasting", icon: Timer, label: "Jejum" },
-];
-
-const moreItems = [
-  { path: "/hydration", icon: Droplets, label: "Água" },
-  { path: "/progress", icon: ImageIcon, label: "Fotos" },
-  { path: "/meal-plan", icon: Utensils, label: "Cardápio" },
-];
 
 export function BottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { t } = useLanguage();
+
+  const navItems = [
+    { path: "/", icon: Home, labelKey: "nav.home" },
+    { path: "/scanner", icon: Camera, labelKey: "nav.scanner" },
+    { path: "/recipes", icon: ChefHat, labelKey: "nav.recipes" },
+    { path: "/missions", icon: Target, labelKey: "nav.missions" },
+    { path: "/profile", icon: User, labelKey: "nav.profile" },
+  ];
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 glass border-t border-border/50 px-2 pb-safe">
@@ -45,7 +39,7 @@ export function BottomNav() {
               className="flex flex-col gap-0.5 h-auto py-2 px-3 min-w-[60px]"
             >
               <Icon className="h-5 w-5" />
-              <span className="text-[10px] font-medium">{item.label}</span>
+              <span className="text-[10px] font-medium">{t(item.labelKey)}</span>
             </Button>
           );
         })}
