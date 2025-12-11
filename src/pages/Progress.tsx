@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Camera, Plus, Calendar, ArrowLeftRight, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLanguage } from "@/contexts/LanguageContext";
 import type { ProgressPhoto } from "@/types/app";
 
 const samplePhotos: ProgressPhoto[] = [
@@ -24,6 +25,7 @@ const samplePhotos: ProgressPhoto[] = [
 ];
 
 const Progress = () => {
+  const { t, language } = useLanguage();
   const [photos, setPhotos] = useState<ProgressPhoto[]>(samplePhotos);
   const [compareMode, setCompareMode] = useState(false);
   const [selectedPhotos, setSelectedPhotos] = useState<string[]>([]);
@@ -60,7 +62,7 @@ const Progress = () => {
   };
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString("pt-BR", {
+    return date.toLocaleDateString(language === "pt" ? "pt-BR" : "en-US", {
       day: "2-digit",
       month: "short",
       year: "numeric",
@@ -72,7 +74,7 @@ const Progress = () => {
   );
 
   return (
-    <AppLayout title="Progresso" subtitle="Galeria antes e depois">
+    <AppLayout title={t("progress.title")} subtitle={t("progress.subtitle")}>
       <div className="space-y-6">
         <div className="flex gap-3">
           <Button
@@ -80,7 +82,7 @@ const Progress = () => {
             className="flex-1"
           >
             <Plus className="mr-2 h-5 w-5" />
-            Nova Foto
+            {t("progress.newPhoto")}
           </Button>
           <Button
             variant={compareMode ? "accent" : "outline"}
@@ -90,7 +92,7 @@ const Progress = () => {
             }}
           >
             <ArrowLeftRight className="mr-2 h-5 w-5" />
-            Comparar
+            {t("progress.compare")}
           </Button>
           <input
             ref={fileInputRef}
@@ -110,7 +112,7 @@ const Progress = () => {
             >
               <Card variant="gradient">
                 <CardHeader>
-                  <CardTitle className="text-center">Comparação</CardTitle>
+                  <CardTitle className="text-center">{t("progress.comparison")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 gap-4">
@@ -120,7 +122,7 @@ const Progress = () => {
                           <div className="aspect-[3/4] rounded-xl overflow-hidden mb-2">
                             <img
                               src={photo.imageUrl}
-                              alt={`Foto ${index + 1}`}
+                              alt={`${t("progress.title")} ${index + 1}`}
                               className="w-full h-full object-cover"
                             />
                           </div>
@@ -142,7 +144,7 @@ const Progress = () => {
                         -{comparedPhotos[0].weight - comparedPhotos[1].weight}kg
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        de diferença
+                        {t("progress.difference")}
                       </p>
                     </div>
                   )}
@@ -157,10 +159,10 @@ const Progress = () => {
             <CardContent className="py-6 text-center">
               <ArrowLeftRight className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
               <p className="text-muted-foreground">
-                Selecione 2 fotos para comparar
+                {t("progress.selectPhotos")}
               </p>
               <p className="text-xs text-muted-foreground">
-                {selectedPhotos.length}/2 selecionadas
+                {selectedPhotos.length}/2 {t("progress.selected")}
               </p>
             </CardContent>
           </Card>
@@ -169,7 +171,7 @@ const Progress = () => {
         <div className="space-y-4">
           <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
             <Camera className="h-5 w-5 text-primary" />
-            Sua Galeria
+            {t("progress.yourGallery")}
           </h3>
 
           {photos.length === 0 ? (
@@ -177,10 +179,10 @@ const Progress = () => {
               <CardContent className="py-12 text-center">
                 <Camera className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
                 <p className="text-muted-foreground mb-2">
-                  Nenhuma foto ainda
+                  {t("progress.noPhotos")}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Adicione sua primeira foto de progresso
+                  {t("progress.addFirst")}
                 </p>
               </CardContent>
             </Card>
@@ -209,7 +211,7 @@ const Progress = () => {
                     <div className="aspect-[3/4] relative">
                       <img
                         src={photo.imageUrl}
-                        alt={`Progresso ${formatDate(photo.date)}`}
+                        alt={`${t("progress.title")} ${formatDate(photo.date)}`}
                         className="w-full h-full object-cover"
                       />
                       {!compareMode && (

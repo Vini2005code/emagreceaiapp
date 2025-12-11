@@ -4,12 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Utensils, Sparkles, Coffee, Sun, Moon, Loader2, Flame } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface MealSuggestion {
-  name: string;
-  description: string;
+  name: { pt: string; en: string };
+  description: { pt: string; en: string };
   calories: number;
-  ingredients: string[];
+  ingredients: { pt: string[]; en: string[] };
 }
 
 interface DailyPlan {
@@ -20,22 +21,31 @@ interface DailyPlan {
 
 const samplePlan: DailyPlan = {
   breakfast: {
-    name: "Ovos mexidos com pão integral",
-    description: "Proteína de qualidade para começar o dia",
+    name: { pt: "Ovos mexidos com pão integral", en: "Scrambled eggs with whole wheat bread" },
+    description: { pt: "Proteína de qualidade para começar o dia", en: "Quality protein to start the day" },
     calories: 320,
-    ingredients: ["2 ovos", "1 fatia pão integral", "azeite", "sal"],
+    ingredients: { 
+      pt: ["2 ovos", "1 fatia pão integral", "azeite", "sal"],
+      en: ["2 eggs", "1 slice whole wheat bread", "olive oil", "salt"]
+    },
   },
   lunch: {
-    name: "Frango grelhado com arroz e feijão",
-    description: "Prato completo e nutritivo",
+    name: { pt: "Frango grelhado com arroz e feijão", en: "Grilled chicken with rice and beans" },
+    description: { pt: "Prato completo e nutritivo", en: "Complete and nutritious meal" },
     calories: 520,
-    ingredients: ["150g frango", "4 colheres arroz", "3 colheres feijão", "salada"],
+    ingredients: { 
+      pt: ["150g frango", "4 colheres arroz", "3 colheres feijão", "salada"],
+      en: ["150g chicken", "4 tbsp rice", "3 tbsp beans", "salad"]
+    },
   },
   dinner: {
-    name: "Sopa de legumes com frango",
-    description: "Leve e reconfortante",
+    name: { pt: "Sopa de legumes com frango", en: "Vegetable soup with chicken" },
+    description: { pt: "Leve e reconfortante", en: "Light and comforting" },
     calories: 280,
-    ingredients: ["100g frango", "cenoura", "batata", "chuchu", "temperos"],
+    ingredients: { 
+      pt: ["100g frango", "cenoura", "batata", "chuchu", "temperos"],
+      en: ["100g chicken", "carrot", "potato", "chayote", "seasonings"]
+    },
   },
 };
 
@@ -45,15 +55,16 @@ const mealIcons = {
   dinner: Moon,
 };
 
-const mealLabels = {
-  breakfast: "Café da Manhã",
-  lunch: "Almoço",
-  dinner: "Jantar",
-};
-
 const MealPlan = () => {
+  const { t, language } = useLanguage();
   const [plan, setPlan] = useState<DailyPlan | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+
+  const mealLabels = {
+    breakfast: t("mealplan.breakfast"),
+    lunch: t("mealplan.lunch"),
+    dinner: t("mealplan.dinner"),
+  };
 
   const generatePlan = () => {
     setIsGenerating(true);
@@ -68,7 +79,7 @@ const MealPlan = () => {
     : 0;
 
   return (
-    <AppLayout title="Prato Feito" subtitle="Sugestão de cardápio do dia">
+    <AppLayout title={t("mealplan.title")} subtitle={t("mealplan.subtitle")}>
       <div className="space-y-6">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -78,10 +89,10 @@ const MealPlan = () => {
             <CardContent className="py-6">
               <Utensils className="h-12 w-12 text-primary mx-auto mb-3" />
               <h2 className="text-xl font-bold text-foreground mb-2">
-                Não sabe o que comer?
+                {t("mealplan.dontKnow")}
               </h2>
               <p className="text-muted-foreground mb-4 text-sm">
-                Receba sugestões de café, almoço e jantar com alimentos acessíveis
+                {t("mealplan.suggestion")}
               </p>
               <Button
                 size="lg"
@@ -92,12 +103,12 @@ const MealPlan = () => {
                 {isGenerating ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Gerando...
+                    {t("mealplan.generating")}
                   </>
                 ) : (
                   <>
                     <Sparkles className="mr-2 h-5 w-5" />
-                    Gerar Cardápio
+                    {t("mealplan.generate")}
                   </>
                 )}
               </Button>
@@ -119,7 +130,7 @@ const MealPlan = () => {
                     <span className="text-2xl font-bold text-accent-foreground">
                       {totalCalories}
                     </span>
-                    <span className="text-accent-foreground/80">kcal total</span>
+                    <span className="text-accent-foreground/80">{t("mealplan.totalKcal")}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -152,13 +163,13 @@ const MealPlan = () => {
                       </CardHeader>
                       <CardContent>
                         <h4 className="font-bold text-foreground mb-1">
-                          {meal.name}
+                          {meal.name[language]}
                         </h4>
                         <p className="text-sm text-muted-foreground mb-3">
-                          {meal.description}
+                          {meal.description[language]}
                         </p>
                         <div className="flex flex-wrap gap-1">
-                          {meal.ingredients.map((ing) => (
+                          {meal.ingredients[language].map((ing) => (
                             <span
                               key={ing}
                               className="text-xs bg-secondary px-2 py-1 rounded-lg text-secondary-foreground"
@@ -179,7 +190,7 @@ const MealPlan = () => {
                 className="w-full"
               >
                 <Sparkles className="mr-2 h-4 w-4" />
-                Gerar Novo Cardápio
+                {t("mealplan.newMenu")}
               </Button>
             </motion.div>
           )}

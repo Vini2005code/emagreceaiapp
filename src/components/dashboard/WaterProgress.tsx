@@ -3,12 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Droplets, Plus, Minus } from "lucide-react";
 import { motion } from "framer-motion";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface WaterProgressProps {
   targetMl?: number;
 }
 
 export function WaterProgress({ targetMl = 2500 }: WaterProgressProps) {
+  const { t } = useLanguage();
   const [currentMl, setCurrentMl] = useState(800);
   const percentage = Math.min((currentMl / targetMl) * 100, 100);
 
@@ -21,7 +23,7 @@ export function WaterProgress({ targetMl = 2500 }: WaterProgressProps) {
       <CardHeader className="pb-2">
         <div className="flex items-center gap-2">
           <Droplets className="h-5 w-5 text-primary" />
-          <CardTitle className="text-lg">Hidratação</CardTitle>
+          <CardTitle className="text-lg">{t("dashboard.hydration")}</CardTitle>
         </div>
       </CardHeader>
       <CardContent>
@@ -42,7 +44,7 @@ export function WaterProgress({ targetMl = 2500 }: WaterProgressProps) {
               {(currentMl / 1000).toFixed(1)}L
             </div>
             <p className="text-sm text-muted-foreground">
-              de {(targetMl / 1000).toFixed(1)}L
+              {t("water.of")} {(targetMl / 1000).toFixed(1)}L
             </p>
             <div className="flex gap-2 mt-3">
               <Button
