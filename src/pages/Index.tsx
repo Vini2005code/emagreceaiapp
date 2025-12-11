@@ -3,11 +3,14 @@ import { QuickActions } from "@/components/dashboard/QuickActions";
 import { DailyMissions } from "@/components/dashboard/DailyMissions";
 import { WaterProgress } from "@/components/dashboard/WaterProgress";
 import { FastingWidget } from "@/components/dashboard/FastingWidget";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
 
 const Index = () => {
+  const { t } = useLanguage();
+
   return (
-    <AppLayout subtitle="Seu assistente de emagrecimento">
+    <AppLayout subtitle={t("app.subtitle")}>
       <div className="space-y-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -15,10 +18,10 @@ const Index = () => {
           className="text-center py-4"
         >
           <h2 className="text-2xl font-bold text-foreground mb-1">
-            Olá! 👋
+            {t("home.greeting")}
           </h2>
           <p className="text-muted-foreground">
-            Vamos conquistar seus objetivos hoje?
+            {t("home.motivation")}
           </p>
         </motion.div>
 
@@ -46,7 +49,7 @@ const Index = () => {
           transition={{ delay: 0.3 }}
         >
           <h3 className="text-lg font-bold mb-3 text-foreground">
-            Acesso Rápido
+            {t("home.quickAccess")}
           </h3>
           <QuickActions />
         </motion.div>
