@@ -3,31 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Check, Target, Flame, Footprints, Apple } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLanguage } from "@/contexts/LanguageContext";
 import type { Mission } from "@/types/app";
-
-const initialMissions: Mission[] = [
-  {
-    id: "1",
-    title: "Beber 500ml de água em jejum",
-    description: "Hidrate-se logo ao acordar",
-    completed: false,
-    icon: "water",
-  },
-  {
-    id: "2",
-    title: "Caminhar 20 minutos",
-    description: "Movimento é essencial",
-    completed: false,
-    icon: "walk",
-  },
-  {
-    id: "3",
-    title: "Evitar açúcar hoje",
-    description: "Seu corpo agradece",
-    completed: false,
-    icon: "apple",
-  },
-];
 
 const iconMap: Record<string, typeof Target> = {
   water: Flame,
@@ -36,6 +13,32 @@ const iconMap: Record<string, typeof Target> = {
 };
 
 export function DailyMissions() {
+  const { t } = useLanguage();
+
+  const initialMissions: Mission[] = [
+    {
+      id: "1",
+      title: t("dashMissions.drink"),
+      description: t("dashMissions.drinkDesc"),
+      completed: false,
+      icon: "water",
+    },
+    {
+      id: "2",
+      title: t("dashMissions.walk"),
+      description: t("dashMissions.walkDesc"),
+      completed: false,
+      icon: "walk",
+    },
+    {
+      id: "3",
+      title: t("dashMissions.noSugar"),
+      description: t("dashMissions.noSugarDesc"),
+      completed: false,
+      icon: "apple",
+    },
+  ];
+
   const [missions, setMissions] = useState<Mission[]>(initialMissions);
   const completedCount = missions.filter((m) => m.completed).length;
 
@@ -51,7 +54,7 @@ export function DailyMissions() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Target className="h-5 w-5 text-primary" />
-            <CardTitle className="text-lg">Missões do Dia</CardTitle>
+            <CardTitle className="text-lg">{t("dashboard.dailyMissions")}</CardTitle>
           </div>
           <span className="text-sm font-bold text-primary">
             {completedCount}/{missions.length}

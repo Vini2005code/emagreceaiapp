@@ -4,9 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Camera, Upload, Loader2, Flame, Beef, Wheat, Droplet } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLanguage } from "@/contexts/LanguageContext";
 import type { NutritionInfo } from "@/types/app";
 
 const Scanner = () => {
+  const { t } = useLanguage();
   const [image, setImage] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [nutritionInfo, setNutritionInfo] = useState<NutritionInfo | null>(null);
@@ -26,7 +28,6 @@ const Scanner = () => {
 
   const analyzeImage = () => {
     setIsAnalyzing(true);
-    // Simulated analysis - in production this would call an AI API
     setTimeout(() => {
       setNutritionInfo({
         calories: 450,
@@ -47,15 +48,15 @@ const Scanner = () => {
 
   const nutritionItems = nutritionInfo
     ? [
-        { icon: Flame, label: "Calorias", value: `${nutritionInfo.calories}`, unit: "kcal", color: "text-accent" },
-        { icon: Beef, label: "Proteína", value: `${nutritionInfo.protein}`, unit: "g", color: "text-primary" },
-        { icon: Wheat, label: "Carboidratos", value: `${nutritionInfo.carbs}`, unit: "g", color: "text-warning" },
-        { icon: Droplet, label: "Gordura", value: `${nutritionInfo.fat}`, unit: "g", color: "text-destructive" },
+        { icon: Flame, label: t("scanner.calories"), value: `${nutritionInfo.calories}`, unit: "kcal", color: "text-accent" },
+        { icon: Beef, label: t("scanner.protein"), value: `${nutritionInfo.protein}`, unit: "g", color: "text-primary" },
+        { icon: Wheat, label: t("scanner.carbs"), value: `${nutritionInfo.carbs}`, unit: "g", color: "text-warning" },
+        { icon: Droplet, label: t("scanner.fat"), value: `${nutritionInfo.fat}`, unit: "g", color: "text-destructive" },
       ]
     : [];
 
   return (
-    <AppLayout title="Scanner de Prato" subtitle="Analise calorias por foto">
+    <AppLayout title={t("scanner.title")} subtitle={t("scanner.subtitle")}>
       <div className="space-y-6">
         <AnimatePresence mode="wait">
           {!image ? (
@@ -71,19 +72,19 @@ const Scanner = () => {
                     <Camera className="h-10 w-10 text-primary-foreground" />
                   </div>
                   <h3 className="text-xl font-bold mb-2 text-foreground">
-                    Tire uma foto do prato
+                    {t("scanner.takePhoto")}
                   </h3>
                   <p className="text-muted-foreground text-center mb-6 max-w-xs">
-                    Nossa IA irá analisar e estimar as informações nutricionais
+                    {t("scanner.aiAnalyze")}
                   </p>
                   <div className="flex gap-3">
                     <Button onClick={() => fileInputRef.current?.click()}>
                       <Upload className="mr-2 h-5 w-5" />
-                      Enviar Foto
+                      {t("scanner.uploadPhoto")}
                     </Button>
                     <Button variant="outline">
                       <Camera className="mr-2 h-5 w-5" />
-                      Câmera
+                      {t("scanner.camera")}
                     </Button>
                   </div>
                   <input
@@ -108,15 +109,15 @@ const Scanner = () => {
                 <div className="relative aspect-video">
                   <img
                     src={image}
-                    alt="Prato analisado"
+                    alt={t("scanner.title")}
                     className="w-full h-full object-cover"
                   />
                   {isAnalyzing && (
                     <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center">
                       <div className="text-center">
                         <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-3" />
-                        <p className="font-semibold text-foreground">Analisando prato...</p>
-                        <p className="text-sm text-muted-foreground">Nossa IA está trabalhando</p>
+                        <p className="font-semibold text-foreground">{t("scanner.analyzing")}</p>
+                        <p className="text-sm text-muted-foreground">{t("scanner.aiWorking")}</p>
                       </div>
                     </div>
                   )}
@@ -127,7 +128,7 @@ const Scanner = () => {
                 <Card variant="gradient">
                   <CardHeader>
                     <CardTitle className="text-center">
-                      Informações Nutricionais
+                      {t("scanner.nutritionInfo")}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -153,8 +154,8 @@ const Scanner = () => {
                     </div>
                     <div className="mt-4 p-3 bg-primary/10 rounded-xl">
                       <p className="text-sm text-center text-foreground">
-                        <span className="font-semibold">Fibra:</span> {nutritionInfo.fiber}g •{" "}
-                        <span className="font-semibold">Açúcar:</span> {nutritionInfo.sugar}g
+                        <span className="font-semibold">{t("scanner.fiber")}:</span> {nutritionInfo.fiber}g •{" "}
+                        <span className="font-semibold">{t("scanner.sugar")}:</span> {nutritionInfo.sugar}g
                       </p>
                     </div>
                   </CardContent>
@@ -162,7 +163,7 @@ const Scanner = () => {
               )}
 
               <Button variant="outline" onClick={resetScanner} className="w-full">
-                Analisar outro prato
+                {t("scanner.analyzeAnother")}
               </Button>
             </motion.div>
           )}

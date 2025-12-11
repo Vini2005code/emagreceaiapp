@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { 
   Camera, 
   ChefHat, 
@@ -10,51 +11,6 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 
-const actions = [
-  {
-    icon: Camera,
-    label: "Scanner de Prato",
-    description: "Calcule calorias por foto",
-    path: "/scanner",
-    color: "primary" as const,
-  },
-  {
-    icon: ChefHat,
-    label: "Receitas",
-    description: "Com o que você tem",
-    path: "/recipes",
-    color: "accent" as const,
-  },
-  {
-    icon: Timer,
-    label: "Jejum",
-    description: "Controle seu tempo",
-    path: "/fasting",
-    color: "success" as const,
-  },
-  {
-    icon: Droplets,
-    label: "Hidratação",
-    description: "Meta de água",
-    path: "/hydration",
-    color: "primary" as const,
-  },
-  {
-    icon: ImageIcon,
-    label: "Progresso",
-    description: "Antes e depois",
-    path: "/progress",
-    color: "accent" as const,
-  },
-  {
-    icon: Utensils,
-    label: "Cardápio",
-    description: "Sugestão do dia",
-    path: "/meal-plan",
-    color: "success" as const,
-  },
-];
-
 const colorClasses = {
   primary: "gradient-primary text-primary-foreground",
   accent: "gradient-accent text-accent-foreground",
@@ -63,6 +19,52 @@ const colorClasses = {
 
 export function QuickActions() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
+
+  const actions = [
+    {
+      icon: Camera,
+      labelKey: "quickActions.scanner",
+      descKey: "quickActions.scannerDesc",
+      path: "/scanner",
+      color: "primary" as const,
+    },
+    {
+      icon: ChefHat,
+      labelKey: "quickActions.recipes",
+      descKey: "quickActions.recipesDesc",
+      path: "/recipes",
+      color: "accent" as const,
+    },
+    {
+      icon: Timer,
+      labelKey: "quickActions.fasting",
+      descKey: "quickActions.fastingDesc",
+      path: "/fasting",
+      color: "success" as const,
+    },
+    {
+      icon: Droplets,
+      labelKey: "quickActions.hydration",
+      descKey: "quickActions.hydrationDesc",
+      path: "/hydration",
+      color: "primary" as const,
+    },
+    {
+      icon: ImageIcon,
+      labelKey: "quickActions.progress",
+      descKey: "quickActions.progressDesc",
+      path: "/progress",
+      color: "accent" as const,
+    },
+    {
+      icon: Utensils,
+      labelKey: "quickActions.mealPlan",
+      descKey: "quickActions.mealPlanDesc",
+      path: "/meal-plan",
+      color: "success" as const,
+    },
+  ];
 
   return (
     <div className="grid grid-cols-2 gap-3">
@@ -85,8 +87,8 @@ export function QuickActions() {
                   <Icon className="h-6 w-6" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-sm">{action.label}</h3>
-                  <p className="text-xs text-muted-foreground">{action.description}</p>
+                  <h3 className="font-semibold text-sm">{t(action.labelKey)}</h3>
+                  <p className="text-xs text-muted-foreground">{t(action.descKey)}</p>
                 </div>
               </CardContent>
             </Card>

@@ -5,13 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Droplets, Plus, Minus, Target, TrendingUp } from "lucide-react";
 import { motion } from "framer-motion";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const quickAddOptions = [150, 250, 500, 750];
 
 const Hydration = () => {
+  const { t } = useLanguage();
   const [weight, setWeight] = useState(70);
   const [currentMl, setCurrentMl] = useState(0);
-  const targetMl = Math.round(weight * 35); // 35ml per kg
+  const targetMl = Math.round(weight * 35);
   const percentage = Math.min((currentMl / targetMl) * 100, 100);
 
   const addWater = (amount: number) => {
@@ -25,7 +27,7 @@ const Hydration = () => {
   ];
 
   return (
-    <AppLayout title="Hidratação" subtitle="Calculadora inteligente de água">
+    <AppLayout title={t("water.title")} subtitle={t("water.subtitle")}>
       <div className="space-y-6">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
@@ -51,7 +53,7 @@ const Hydration = () => {
                 {(currentMl / 1000).toFixed(1)}L
               </p>
               <p className="text-primary-foreground/80">
-                de {(targetMl / 1000).toFixed(1)}L ({percentage.toFixed(0)}%)
+                {t("water.of")} {(targetMl / 1000).toFixed(1)}L ({percentage.toFixed(0)}%)
               </p>
 
               <div className="flex justify-center gap-2 mt-6 flex-wrap">
@@ -92,12 +94,12 @@ const Hydration = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Target className="h-5 w-5 text-primary" />
-              Calcular Meta
+              {t("water.calculateGoal")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-3">
-              Seu peso define a quantidade ideal de água por dia (35ml/kg)
+              {t("water.weightTip")}
             </p>
             <div className="flex gap-3 items-center">
               <Input
@@ -110,7 +112,7 @@ const Hydration = () => {
               />
               <span className="text-muted-foreground">kg</span>
               <span className="text-foreground font-semibold ml-auto">
-                Meta: {(targetMl / 1000).toFixed(1)}L
+                {t("dashboard.goal")}: {(targetMl / 1000).toFixed(1)}L
               </span>
             </div>
           </CardContent>
@@ -120,7 +122,7 @@ const Hydration = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-primary" />
-              Registro de Hoje
+              {t("water.todayLog")}
             </CardTitle>
           </CardHeader>
           <CardContent>

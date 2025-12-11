@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Timer, Play, Pause, RotateCcw, Utensils, Moon } from "lucide-react";
 import { motion } from "framer-motion";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const fastingProtocols = [
   { name: "16:8", fastHours: 16, eatHours: 8 },
@@ -12,6 +13,7 @@ const fastingProtocols = [
 ];
 
 const Fasting = () => {
+  const { t } = useLanguage();
   const [isActive, setIsActive] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [selectedProtocol, setSelectedProtocol] = useState(fastingProtocols[0]);
@@ -59,15 +61,15 @@ const Fasting = () => {
   };
 
   const getMessage = () => {
-    if (progress >= 100) return "🎉 Jejum completo! Você conseguiu!";
-    if (progress >= 75) return "💪 Quase lá! Falta pouco!";
-    if (progress >= 50) return "🔥 Metade do caminho! Continue firme!";
-    if (progress >= 25) return "⚡ Bom progresso! Mantenha o foco!";
-    return "🚀 Você começou! Vamos nessa!";
+    if (progress >= 100) return t("fasting.msg100");
+    if (progress >= 75) return t("fasting.msg75");
+    if (progress >= 50) return t("fasting.msg50");
+    if (progress >= 25) return t("fasting.msg25");
+    return t("fasting.msg0");
   };
 
   return (
-    <AppLayout title="Jejum Intermitente" subtitle="Controle seu tempo de jejum">
+    <AppLayout title={t("fasting.title")} subtitle={t("fasting.subtitle")}>
       <div className="space-y-6">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
@@ -105,7 +107,7 @@ const Fasting = () => {
                     {formatTime(hours, minutes, seconds)}
                   </p>
                   <p className="text-sm text-primary-foreground/80">
-                    {progress.toFixed(0)}% completo
+                    {progress.toFixed(0)}% {t("fasting.complete")}
                   </p>
                 </div>
               </div>
@@ -116,7 +118,7 @@ const Fasting = () => {
 
               {remainingSeconds > 0 && (
                 <p className="text-sm text-primary-foreground/80">
-                  Faltam {remainingHours}h {remainingMinutes}min
+                  {t("fasting.remaining")} {remainingHours}h {remainingMinutes}min
                 </p>
               )}
 
@@ -129,7 +131,7 @@ const Fasting = () => {
                     className="min-w-[120px]"
                   >
                     <Play className="mr-2 h-5 w-5" />
-                    Iniciar
+                    {t("fasting.start")}
                   </Button>
                 ) : (
                   <Button
@@ -139,7 +141,7 @@ const Fasting = () => {
                     className="min-w-[120px]"
                   >
                     <Pause className="mr-2 h-5 w-5" />
-                    Pausar
+                    {t("fasting.pause")}
                   </Button>
                 )}
                 <Button
@@ -157,7 +159,7 @@ const Fasting = () => {
 
         <Card variant="gradient">
           <CardHeader>
-            <CardTitle className="text-lg">Protocolo de Jejum</CardTitle>
+            <CardTitle className="text-lg">{t("fasting.protocol")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-3 gap-3">
@@ -178,7 +180,7 @@ const Fasting = () => {
                 >
                   <span className="text-lg font-bold">{protocol.name}</span>
                   <span className="text-xs opacity-80">
-                    {protocol.fastHours}h jejum
+                    {protocol.fastHours}h {t("fasting.fasting")}
                   </span>
                 </Button>
               ))}
@@ -193,7 +195,7 @@ const Fasting = () => {
               <p className="text-2xl font-bold text-foreground">
                 {selectedProtocol.fastHours}h
               </p>
-              <p className="text-sm text-muted-foreground">Período de jejum</p>
+              <p className="text-sm text-muted-foreground">{t("fasting.fastPeriod")}</p>
             </CardContent>
           </Card>
           <Card variant="elevated">
@@ -202,7 +204,7 @@ const Fasting = () => {
               <p className="text-2xl font-bold text-foreground">
                 {selectedProtocol.eatHours}h
               </p>
-              <p className="text-sm text-muted-foreground">Janela alimentar</p>
+              <p className="text-sm text-muted-foreground">{t("fasting.eatWindow")}</p>
             </CardContent>
           </Card>
         </div>

@@ -4,9 +4,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Timer, Play, Pause } from "lucide-react";
 import { motion } from "framer-motion";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export function FastingWidget() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [isActive, setIsActive] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const targetHours = 16;
@@ -63,12 +65,12 @@ export function FastingWidget() {
             </div>
           </div>
           <div className="flex-1">
-            <h3 className="font-semibold text-sm mb-1">Jejum Intermitente</h3>
+            <h3 className="font-semibold text-sm mb-1">{t("dashboard.intermittentFasting")}</h3>
             <p className="text-2xl font-bold text-foreground">
               {formatTime(hours, minutes)}
             </p>
             <p className="text-xs text-muted-foreground">
-              Meta: {targetHours}h • {isActive ? "Em andamento" : "Pausado"}
+              {t("dashboard.goal")}: {targetHours}h • {isActive ? t("fasting.inProgress") : t("fasting.paused")}
             </p>
           </div>
           <Button

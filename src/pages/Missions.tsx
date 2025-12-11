@@ -4,15 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Check, Trophy, Star, Target, Zap, Flame, Heart } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLanguage } from "@/contexts/LanguageContext";
 import type { Mission } from "@/types/app";
-
-const dailyMissions: Mission[] = [
-  { id: "1", title: "Beber 500ml de água em jejum", description: "Hidrate seu corpo logo ao acordar", completed: false, icon: "water" },
-  { id: "2", title: "Caminhar 20 minutos", description: "Movimento é essencial para saúde", completed: false, icon: "walk" },
-  { id: "3", title: "Não comer açúcar hoje", description: "Evite doces e refrigerantes", completed: false, icon: "sugar" },
-  { id: "4", title: "Dormir antes das 23h", description: "Sono de qualidade é fundamental", completed: false, icon: "sleep" },
-  { id: "5", title: "Comer uma fruta", description: "Vitaminas e fibras naturais", completed: false, icon: "fruit" },
-];
 
 const iconMap: Record<string, typeof Target> = {
   water: Zap,
@@ -23,6 +16,16 @@ const iconMap: Record<string, typeof Target> = {
 };
 
 const Missions = () => {
+  const { t } = useLanguage();
+
+  const dailyMissions: Mission[] = [
+    { id: "1", title: t("missions.mission1.title"), description: t("missions.mission1.desc"), completed: false, icon: "water" },
+    { id: "2", title: t("missions.mission2.title"), description: t("missions.mission2.desc"), completed: false, icon: "walk" },
+    { id: "3", title: t("missions.mission3.title"), description: t("missions.mission3.desc"), completed: false, icon: "sugar" },
+    { id: "4", title: t("missions.mission4.title"), description: t("missions.mission4.desc"), completed: false, icon: "sleep" },
+    { id: "5", title: t("missions.mission5.title"), description: t("missions.mission5.desc"), completed: false, icon: "fruit" },
+  ];
+
   const [missions, setMissions] = useState<Mission[]>(dailyMissions);
   const completedCount = missions.filter((m) => m.completed).length;
   const totalPoints = completedCount * 10;
@@ -34,7 +37,7 @@ const Missions = () => {
   };
 
   return (
-    <AppLayout title="Missões Diárias" subtitle="O Chefe dá as ordens">
+    <AppLayout title={t("missions.daily")} subtitle={t("missions.subtitle")}>
       <div className="space-y-6">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -44,10 +47,10 @@ const Missions = () => {
             <CardContent className="py-6">
               <Trophy className="h-12 w-12 mx-auto mb-3 text-primary-foreground" />
               <h2 className="text-3xl font-bold text-primary-foreground mb-1">
-                {totalPoints} pontos
+                {totalPoints} {t("missions.points")}
               </h2>
               <p className="text-primary-foreground/80">
-                {completedCount} de {missions.length} missões completas
+                {completedCount} {t("general.of")} {missions.length} {t("missions.completed")}
               </p>
               <div className="mt-4 h-3 bg-primary-foreground/20 rounded-full overflow-hidden">
                 <motion.div
@@ -64,7 +67,7 @@ const Missions = () => {
         <div className="space-y-3">
           <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
             <Target className="h-5 w-5 text-primary" />
-            Missões de Hoje
+            {t("missions.today")}
           </h3>
           
           <AnimatePresence>
@@ -139,10 +142,10 @@ const Missions = () => {
               <CardContent className="py-6">
                 <Star className="h-12 w-12 mx-auto mb-3 text-accent-foreground animate-bounce-soft" />
                 <h3 className="text-xl font-bold text-accent-foreground">
-                  Parabéns! 🎉
+                  {t("missions.congrats")}
                 </h3>
                 <p className="text-accent-foreground/80">
-                  Você completou todas as missões de hoje!
+                  {t("missions.allComplete")}
                 </p>
               </CardContent>
             </Card>
