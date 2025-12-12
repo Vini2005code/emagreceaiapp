@@ -4,6 +4,7 @@ export interface Mission {
   description: string;
   completed: boolean;
   icon: string;
+  points?: number;
 }
 
 export interface Recipe {
