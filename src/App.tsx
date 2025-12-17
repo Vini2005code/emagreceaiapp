@@ -12,6 +12,7 @@ import Fasting from "./pages/Fasting";
 import Hydration from "./pages/Hydration";
 import Progress from "./pages/Progress";
 import MealPlan from "./pages/MealPlan";
+import Trainer from "./pages/Trainer";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
@@ -33,6 +34,7 @@ const App = () => (
             <Route path="/hydration" element={<Hydration />} />
             <Route path="/progress" element={<Progress />} />
             <Route path="/meal-plan" element={<MealPlan />} />
+            <Route path="/trainer" element={<Trainer />} />
             <Route path="/profile" element={<Profile />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
