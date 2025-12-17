@@ -5,9 +5,9 @@ import {
   Camera, 
   ChefHat, 
   Target, 
-  Timer, 
   User,
-  Home
+  Home,
+  GraduationCap
 } from "lucide-react";
 
 export function BottomNav() {
@@ -20,6 +20,7 @@ export function BottomNav() {
     { path: "/scanner", icon: Camera, labelKey: "nav.scanner" },
     { path: "/recipes", icon: ChefHat, labelKey: "nav.recipes" },
     { path: "/missions", icon: Target, labelKey: "nav.missions" },
+    { path: "/trainer", icon: GraduationCap, labelKey: "nav.trainer" },
     { path: "/profile", icon: User, labelKey: "nav.profile" },
   ];
 
