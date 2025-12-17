@@ -1,98 +1,26 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { useMemo } from "react";
-import { 
-  AlertTriangle, 
-  Dumbbell, 
-  Brain, 
-  Heart, 
-  Apple,
-  Moon,
-  Footprints,
-  Flame,
-  BookOpen
-} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { AlertTriangle, Send, Loader2 } from "lucide-react";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useToast } from "@/hooks/use-toast";
+
+interface Message {
+  role: "user" | "assistant";
+  content: string;
+}
 
 export default function Trainer() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { profile } = useUserProfile();
-
-  const tips = [
-    {
-      icon: Dumbbell,
-      titleKey: "trainer.tips.exercise.title",
-      descKey: "trainer.tips.exercise.desc",
-      category: "fitness"
-    },
-    {
-      icon: Apple,
-      titleKey: "trainer.tips.nutrition.title",
-      descKey: "trainer.tips.nutrition.desc",
-      category: "nutrition"
-    },
-    {
-      icon: Moon,
-      titleKey: "trainer.tips.sleep.title",
-      descKey: "trainer.tips.sleep.desc",
-      category: "lifestyle"
-    },
-    {
-      icon: Heart,
-      titleKey: "trainer.tips.cardio.title",
-      descKey: "trainer.tips.cardio.desc",
-      category: "fitness"
-    },
-    {
-      icon: Brain,
-      titleKey: "trainer.tips.mindset.title",
-      descKey: "trainer.tips.mindset.desc",
-      category: "mental"
-    },
-    {
-      icon: Footprints,
-      titleKey: "trainer.tips.steps.title",
-      descKey: "trainer.tips.steps.desc",
-      category: "fitness"
-    },
-    {
-      icon: Flame,
-      titleKey: "trainer.tips.metabolism.title",
-      descKey: "trainer.tips.metabolism.desc",
-      category: "nutrition"
-    }
-  ];
-
-  const studies = [
-    {
-      titleKey: "trainer.studies.hiit.title",
-      descKey: "trainer.studies.hiit.desc",
-      sourceKey: "trainer.studies.hiit.source"
-    },
-    {
-      titleKey: "trainer.studies.protein.title",
-      descKey: "trainer.studies.protein.desc",
-      sourceKey: "trainer.studies.protein.source"
-    },
-    {
-      titleKey: "trainer.studies.sleep.title",
-      descKey: "trainer.studies.sleep.desc",
-      sourceKey: "trainer.studies.sleep.source"
-    }
-  ];
-
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case "fitness": return "bg-primary/20 text-primary";
-      case "nutrition": return "bg-green-500/20 text-green-400";
-      case "lifestyle": return "bg-purple-500/20 text-purple-400";
-      case "mental": return "bg-blue-500/20 text-blue-400";
-      default: return "bg-muted text-muted-foreground";
-    }
-  };
+  const { toast } = useToast();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const bmi = useMemo(() => {
     if (profile.weight && profile.height) {
@@ -102,85 +30,225 @@ export default function Trainer() {
     return null;
   }, [profile.weight, profile.height]);
 
+  const getBmiCategory = (bmi: number): string => {
+    if (bmi < 18.5) return "underweight";
+    if (bmi < 25) return "normal";
+    if (bmi < 30) return "overweight";
+    return "obese";
+  };
+
+  const suggestions = language === "pt" ? [
+    "Como perder gordura abdominal?",
+    "Qual a melhor dieta para emagrecer?",
+    "Quantas calorias devo comer por dia?",
+    "Exercícios para fazer em casa",
+    "Como manter a motivação?",
+    "Jejum intermitente funciona?"
+  ] : [
+    "How to lose belly fat?",
+    "What's the best diet for weight loss?",
+    "How many calories should I eat daily?",
+    "Home workout exercises",
+    "How to stay motivated?",
+    "Does intermittent fasting work?"
+  ];
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const streamChat = useCallback(async (userMessage: string) => {
+    const newMessages: Message[] = [...messages, { role: "user", content: userMessage }];
+    setMessages(newMessages);
+    setIsLoading(true);
+
+    let assistantContent = "";
+
+    try {
+      const userProfile = bmi ? {
+        weight: profile.weight,
+        height: profile.height,
+        age: profile.age,
+        bmi,
+        bmiCategory: getBmiCategory(bmi)
+      } : null;
+
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/trainer-chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ 
+          messages: newMessages,
+          userProfile
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to get response");
+      }
+
+      if (!response.body) throw new Error("No response body");
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let textBuffer = "";
+
+      const updateAssistant = (content: string) => {
+        assistantContent = content;
+        setMessages(prev => {
+          const last = prev[prev.length - 1];
+          if (last?.role === "assistant") {
+            return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: assistantContent } : m));
+          }
+          return [...prev, { role: "assistant", content: assistantContent }];
+        });
+      };
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line.startsWith(":") || line.trim() === "") continue;
+          if (!line.startsWith("data: ")) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") break;
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              assistantContent += content;
+              updateAssistant(assistantContent);
+            }
+          } catch {
+            textBuffer = line + "\n" + textBuffer;
+            break;
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Chat error:", error);
+      toast({
+        title: language === "pt" ? "Erro" : "Error",
+        description: error instanceof Error ? error.message : "Failed to send message",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [messages, bmi, profile, language, toast]);
+
+  const handleSend = () => {
+    if (!input.trim() || isLoading) return;
+    const message = input.trim();
+    setInput("");
+    streamChat(message);
+  };
+
+  const handleSuggestionClick = (suggestion: string) => {
+    if (isLoading) return;
+    streamChat(suggestion);
+  };
+
   return (
     <AppLayout>
-      <div className="p-4 space-y-6 pb-24">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-foreground">{t("trainer.title")}</h1>
-          <p className="text-muted-foreground mt-1">{t("trainer.subtitle")}</p>
+      <div className="flex flex-col h-[calc(100vh-140px)]">
+        {/* Header */}
+        <div className="p-4 border-b border-border/50">
+          <h1 className="text-xl font-bold text-foreground text-center">{t("trainer.title")}</h1>
+          <Alert className="border-amber-500/50 bg-amber-500/10 mt-3">
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
+            <AlertDescription className="text-amber-200/90 text-xs">
+              {t("trainer.disclaimer")}
+            </AlertDescription>
+          </Alert>
         </div>
 
-        {/* Disclaimer */}
-        <Alert className="border-amber-500/50 bg-amber-500/10">
-          <AlertTriangle className="h-4 w-4 text-amber-500" />
-          <AlertDescription className="text-amber-200/90 text-sm">
-            {t("trainer.disclaimer")}
-          </AlertDescription>
-        </Alert>
-
-        {/* Profile Status */}
-        {profile.weight && profile.height && bmi && (
-          <Card className="glass border-border/50">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">{t("trainer.personalizedFor")}</span>
-                <div className="flex gap-2">
-                  <Badge variant="secondary">IMC: {bmi.toFixed(1)}</Badge>
-                  {profile.age && <Badge variant="secondary">{profile.age} {t("profile.age")}</Badge>}
-                </div>
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full space-y-6">
+              <p className="text-muted-foreground text-center">
+                {language === "pt" 
+                  ? "Olá! Sou seu treinador virtual. Como posso te ajudar hoje?" 
+                  : "Hi! I'm your virtual trainer. How can I help you today?"}
+              </p>
+              
+              {/* Suggestion bubbles */}
+              <div className="flex flex-wrap justify-center gap-2 max-w-md">
+                {suggestions.map((suggestion, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleSuggestionClick(suggestion)}
+                    className="px-3 py-2 text-sm bg-primary/10 hover:bg-primary/20 text-primary rounded-full transition-colors border border-primary/20"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
               </div>
-            </CardContent>
-          </Card>
-        )}
+            </div>
+          ) : (
+            <>
+              {messages.map((message, index) => (
+                <div
+                  key={index}
+                  className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                >
+                  <div
+                    className={`max-w-[80%] rounded-2xl px-4 py-2 ${
+                      message.role === "user"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-foreground"
+                    }`}
+                  >
+                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                  </div>
+                </div>
+              ))}
+              {isLoading && messages[messages.length - 1]?.role === "user" && (
+                <div className="flex justify-start">
+                  <div className="bg-muted rounded-2xl px-4 py-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </>
+          )}
+        </div>
 
-        {/* Tips Section */}
-        <section>
-          <h2 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-            <Dumbbell className="h-5 w-5 text-primary" />
-            {t("trainer.tipsTitle")}
-          </h2>
-          <div className="grid gap-3">
-            {tips.map((tip, index) => {
-              const Icon = tip.icon;
-              return (
-                <Card key={index} className="glass border-border/50">
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-3">
-                      <div className={`p-2 rounded-lg ${getCategoryColor(tip.category)}`}>
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-medium text-foreground">{t(tip.titleKey)}</h3>
-                        <p className="text-sm text-muted-foreground mt-1">{t(tip.descKey)}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+        {/* Input */}
+        <div className="p-4 border-t border-border/50">
+          <div className="flex gap-2">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+              placeholder={language === "pt" ? "Digite sua pergunta..." : "Type your question..."}
+              disabled={isLoading}
+              className="flex-1"
+            />
+            <Button onClick={handleSend} disabled={!input.trim() || isLoading} size="icon">
+              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            </Button>
           </div>
-        </section>
-
-        {/* Studies Section */}
-        <section>
-          <h2 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-            <BookOpen className="h-5 w-5 text-primary" />
-            {t("trainer.studiesTitle")}
-          </h2>
-          <div className="grid gap-3">
-            {studies.map((study, index) => (
-              <Card key={index} className="glass border-border/50">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">{t(study.titleKey)}</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <p className="text-sm text-muted-foreground">{t(study.descKey)}</p>
-                  <p className="text-xs text-primary/70 mt-2 italic">{t(study.sourceKey)}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </section>
+        </div>
       </div>
     </AppLayout>
   );
