@@ -26,20 +26,30 @@ const Scanner = () => {
     }
   };
 
-  const analyzeImage = () => {
-    setIsAnalyzing(true);
-    setTimeout(() => {
-      setNutritionInfo({
-        calories: 450,
-        protein: 28,
-        carbs: 45,
-        fat: 18,
-        fiber: 6,
-        sugar: 8,
-      });
-      setIsAnalyzing(false);
-    }, 2000);
-  };
+const analyzeImage = async () => {
+  if (!image) return;
+
+  setIsAnalyzing(true);
+
+  try {
+    const response = await fetch("/api/analyzeImage", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ image }),
+    });
+
+    const data = await response.json();
+
+    setNutritionInfo(data);
+  } catch (error) {
+    console.error("Erro ao analisar imagem:", error);
+  } finally {
+    setIsAnalyzing(false);
+  }
+};
+
 
   const resetScanner = () => {
     setImage(null);
