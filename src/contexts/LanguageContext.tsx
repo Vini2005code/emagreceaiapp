@@ -200,6 +200,8 @@ const translations = {
     "scanner.takePhoto": "Tire uma foto do prato",
     "scanner.aiAnalyze": "Nossa IA irá analisar e estimar as informações nutricionais",
     "scanner.uploadPhoto": "Enviar Foto",
+    "scanner.uploadTitle": "Tire uma foto do seu prato",
+    "scanner.uploadDesc": "Nossa IA vai identificar o alimento e calcular as calorias automaticamente",
     "scanner.camera": "Câmera",
     "scanner.analyzing": "Analisando prato...",
     "scanner.aiWorking": "Nossa IA está trabalhando",
@@ -211,6 +213,10 @@ const translations = {
     "scanner.fiber": "Fibra",
     "scanner.sugar": "Açúcar",
     "scanner.analyzeAnother": "Analisar outro prato",
+    "scanner.scanAnother": "Escanear outro prato",
+    "scanner.notFood": "A imagem não parece ser um alimento",
+    "scanner.errorAnalyzing": "Erro ao analisar a imagem. Tente novamente.",
+    "scanner.analysisComplete": "Análise concluída!",
     
     // Recipes
     "recipes.title": "Receitas",
@@ -491,6 +497,8 @@ const translations = {
     "scanner.takePhoto": "Take a photo of the plate",
     "scanner.aiAnalyze": "Our AI will analyze and estimate nutritional information",
     "scanner.uploadPhoto": "Upload Photo",
+    "scanner.uploadTitle": "Take a photo of your plate",
+    "scanner.uploadDesc": "Our AI will identify the food and calculate calories automatically",
     "scanner.camera": "Camera",
     "scanner.analyzing": "Analyzing plate...",
     "scanner.aiWorking": "Our AI is working",
@@ -502,6 +510,10 @@ const translations = {
     "scanner.fiber": "Fiber",
     "scanner.sugar": "Sugar",
     "scanner.analyzeAnother": "Analyze another plate",
+    "scanner.scanAnother": "Scan another plate",
+    "scanner.notFood": "The image does not appear to be food",
+    "scanner.errorAnalyzing": "Error analyzing image. Please try again.",
+    "scanner.analysisComplete": "Analysis complete!",
     
     // Recipes
     "recipes.title": "Recipes",
