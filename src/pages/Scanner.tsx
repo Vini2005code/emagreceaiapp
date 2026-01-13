@@ -183,8 +183,14 @@ const Scanner = () => {
               )}
 
               {result && !result.isFood && (
-                <CardContent className="p-6 text-center">
-                  <p className="text-muted-foreground">{t("scanner.notFood")}</p>
+                <CardContent className="p-6 text-center space-y-4">
+                  <div className="w-16 h-16 mx-auto bg-destructive/10 rounded-full flex items-center justify-center">
+                    <Camera className="h-8 w-8 text-destructive" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-destructive">{t("scanner.notFoodTitle")}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{t("scanner.notFoodDesc")}</p>
+                  </div>
                 </CardContent>
               )}
 
