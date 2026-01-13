@@ -5,12 +5,12 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-5 [&_svg]:shrink-0 active:scale-[0.98]",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-2xl text-sm font-semibold transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-5 [&_svg]:shrink-0 active:scale-[0.98]",
   {
     variants: {
       variant: {
         default:
-          "gradient-primary text-primary-foreground shadow-soft hover:shadow-glow hover:brightness-110",
+          "bg-primary text-primary-foreground shadow-md hover:shadow-lg hover:bg-primary/90",
         destructive:
           "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
         outline:
@@ -21,21 +21,30 @@ const buttonVariants = cva(
           "hover:bg-primary/10 text-foreground hover:text-primary",
         link: 
           "text-primary underline-offset-4 hover:underline",
+        // GOLD CTA - Primary action button
         accent:
-          "gradient-accent text-accent-foreground shadow-accent hover:brightness-110",
+          "gradient-accent text-accent-foreground shadow-gold hover:brightness-110 hover:shadow-accent font-bold",
+        cta:
+          "gradient-accent text-accent-foreground shadow-gold hover:brightness-110 hover:shadow-accent font-bold animate-glow",
         success:
-          "gradient-success text-success-foreground shadow-soft hover:brightness-110",
+          "bg-success text-success-foreground shadow-sm hover:bg-success/90",
         glass:
           "glass text-foreground hover:bg-card/90",
         nav:
           "bg-transparent text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-2xl",
         navActive:
-          "gradient-primary text-primary-foreground shadow-soft rounded-2xl",
+          "bg-primary text-primary-foreground shadow-md rounded-2xl",
+        // Teal gradient for special cases
+        teal:
+          "gradient-teal text-primary-foreground shadow-md hover:shadow-lg hover:brightness-110",
+        // Mint/soft variant
+        mint:
+          "bg-secondary text-primary shadow-sm hover:shadow-md hover:bg-secondary/90",
       },
       size: {
         default: "h-11 px-5 py-2",
-        sm: "h-9 rounded-lg px-3 text-xs",
-        lg: "h-12 rounded-xl px-8 text-base",
+        sm: "h-9 rounded-xl px-3 text-xs",
+        lg: "h-12 rounded-2xl px-8 text-base",
         xl: "h-14 rounded-2xl px-10 text-lg",
         icon: "h-11 w-11",
         iconSm: "h-9 w-9",

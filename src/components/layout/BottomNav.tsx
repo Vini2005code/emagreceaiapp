@@ -25,7 +25,7 @@ export function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 glass border-t border-border/50 px-2 pb-safe">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 glass-strong border-t border-border/30 px-2 pb-safe">
       <div className="flex items-center justify-around py-2 max-w-lg mx-auto">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
