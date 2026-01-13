@@ -215,6 +215,8 @@ const translations = {
     "scanner.analyzeAnother": "Analisar outro prato",
     "scanner.scanAnother": "Escanear outro prato",
     "scanner.notFood": "A imagem não parece ser um alimento",
+    "scanner.notFoodTitle": "Isto não é um alimento",
+    "scanner.notFoodDesc": "Tente novamente com uma foto de comida",
     "scanner.errorAnalyzing": "Erro ao analisar a imagem. Tente novamente.",
     "scanner.analysisComplete": "Análise concluída!",
     
@@ -512,6 +514,8 @@ const translations = {
     "scanner.analyzeAnother": "Analyze another plate",
     "scanner.scanAnother": "Scan another plate",
     "scanner.notFood": "The image does not appear to be food",
+    "scanner.notFoodTitle": "This is not food",
+    "scanner.notFoodDesc": "Try again with a photo of food",
     "scanner.errorAnalyzing": "Error analyzing image. Please try again.",
     "scanner.analysisComplete": "Analysis complete!",
     
