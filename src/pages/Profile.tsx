@@ -14,7 +14,7 @@ import { BMIDisplay } from "@/components/profile/BMIDisplay";
 import { DietRecommendation } from "@/components/profile/DietRecommendation";
 
 const Profile = () => {
-  const { profile, saveProfile, calculateBMI, getBMICategory, getIdealWeight, getDietRecommendation } = useUserProfile();
+  const { profile, saveProfile, calculateBMI, getBMICategory, getIdealWeight, getDietRecommendation, estimateBodyFat, calculateWaterIntake } = useUserProfile();
   const { t } = useLanguage();
   const { toast } = useToast();
   
@@ -32,6 +32,8 @@ const Profile = () => {
   const bmiCategory = getBMICategory(bmi);
   const idealWeight = getIdealWeight();
   const diet = getDietRecommendation();
+  const bodyFat = estimateBodyFat();
+  const waterIntake = calculateWaterIntake();
 
   return (
     <AppLayout title={t("profile.title")} subtitle={t("profile.subtitle")}>
@@ -193,6 +195,8 @@ const Profile = () => {
             idealWeight={idealWeight}
             currentWeight={profile.weight}
             goalWeight={profile.goalWeight}
+            bodyFat={bodyFat}
+            waterIntake={waterIntake}
           />
         </motion.div>
 

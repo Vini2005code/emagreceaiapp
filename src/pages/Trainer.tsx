@@ -203,9 +203,9 @@ export default function Trainer() {
         {/* Header */}
         <div className="p-4 border-b border-border/50">
           <h1 className="text-xl font-bold text-foreground text-center">{t("trainer.title")}</h1>
-          <Alert className="border-amber-500/50 bg-amber-500/10 mt-3">
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
-            <AlertDescription className="text-amber-200/90 text-xs">
+          <Alert className="border-amber-600 bg-amber-50 dark:bg-amber-950/30 mt-3">
+            <AlertTriangle className="h-4 w-4 text-amber-700 dark:text-amber-400" />
+            <AlertDescription className="text-amber-800 dark:text-amber-200 text-xs font-medium">
               {t("trainer.disclaimer")}
             </AlertDescription>
           </Alert>
