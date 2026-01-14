@@ -36,7 +36,7 @@
 
     /* Accent - Gold/Warm Yellow from AI/Brain - for CTAs */
     --accent: 42 90% 55%;
-    --accent-foreground: 42 90% 15%;
+    --accent-foreground: 192 45% 15%;
 
     /* Destructive */
     --destructive: 0 72% 50%;
@@ -125,7 +125,7 @@
     --muted-foreground: 168 20% 65%;
 
     --accent: 42 85% 58%;
-    --accent-foreground: 42 90% 10%;
+    --accent-foreground: 192 40% 10%;
 
     --destructive: 0 80% 55%;
     --destructive-foreground: 0 85% 97%;

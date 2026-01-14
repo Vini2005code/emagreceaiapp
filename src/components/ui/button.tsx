@@ -21,11 +21,11 @@ const buttonVariants = cva(
           "hover:bg-primary/10 text-foreground hover:text-primary",
         link: 
           "text-primary underline-offset-4 hover:underline",
-        // GOLD CTA - Primary action button
+        // GOLD CTA - Primary action button (dark text for contrast)
         accent:
-          "gradient-accent text-accent-foreground shadow-gold hover:brightness-110 hover:shadow-accent font-bold",
+          "gradient-accent text-primary shadow-gold hover:brightness-110 hover:shadow-accent font-bold",
         cta:
-          "gradient-accent text-accent-foreground shadow-gold hover:brightness-110 hover:shadow-accent font-bold animate-glow",
+          "gradient-accent text-primary shadow-gold hover:brightness-110 hover:shadow-accent font-bold animate-glow",
         success:
           "bg-success text-success-foreground shadow-sm hover:bg-success/90",
         glass:
