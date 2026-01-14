@@ -37,21 +37,52 @@ export default function Trainer() {
     return "obese";
   };
 
-  const suggestions = language === "pt" ? [
+  // All available suggestions
+  const allSuggestionsPt = [
     "Como perder gordura abdominal?",
     "Qual a melhor dieta para emagrecer?",
     "Quantas calorias devo comer por dia?",
     "Exercícios para fazer em casa",
     "Como manter a motivação?",
-    "Jejum intermitente funciona?"
-  ] : [
+    "Jejum intermitente funciona?",
+    "Dicas para acelerar o metabolismo",
+    "Melhores alimentos para emagrecer",
+    "Como evitar o efeito sanfona?",
+    "Exercícios para queimar gordura",
+    "O que comer antes de treinar?",
+    "Dicas para diminuir a ansiedade alimentar"
+  ];
+
+  const allSuggestionsEn = [
     "How to lose belly fat?",
     "What's the best diet for weight loss?",
     "How many calories should I eat daily?",
     "Home workout exercises",
     "How to stay motivated?",
-    "Does intermittent fasting work?"
+    "Does intermittent fasting work?",
+    "Tips to boost metabolism",
+    "Best foods for weight loss",
+    "How to avoid yo-yo dieting?",
+    "Fat burning exercises",
+    "What to eat before training?",
+    "Tips to reduce food anxiety"
   ];
+
+  // Get daily random suggestions based on date
+  const dailySuggestions = useMemo(() => {
+    const allSuggestions = language === "pt" ? allSuggestionsPt : allSuggestionsEn;
+    const today = new Date();
+    const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+    
+    // Simple shuffle based on date seed
+    const shuffled = [...allSuggestions].sort((a, b) => {
+      const hashA = (seed * a.length) % 1000;
+      const hashB = (seed * b.length) % 1000;
+      return hashA - hashB;
+    });
+    
+    return shuffled.slice(0, 6);
+  }, [language]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -192,11 +223,11 @@ export default function Trainer() {
               
               {/* Suggestion bubbles */}
               <div className="flex flex-wrap justify-center gap-2 max-w-md">
-                {suggestions.map((suggestion, index) => (
+                {dailySuggestions.map((suggestion, index) => (
                   <button
                     key={index}
                     onClick={() => handleSuggestionClick(suggestion)}
-                    className="px-3 py-2 text-sm bg-primary/10 hover:bg-primary/20 text-primary rounded-full transition-colors border border-primary/20"
+                    className="px-3 py-2 text-sm bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-full transition-colors border border-border"
                   >
                     {suggestion}
                   </button>
@@ -244,7 +275,7 @@ export default function Trainer() {
               disabled={isLoading}
               className="flex-1"
             />
-            <Button onClick={handleSend} disabled={!input.trim() || isLoading} size="icon">
+            <Button onClick={handleSend} disabled={!input.trim() || isLoading} size="icon" className="bg-primary text-primary-foreground hover:bg-primary/90">
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             </Button>
           </div>

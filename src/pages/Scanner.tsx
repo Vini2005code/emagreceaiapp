@@ -25,7 +25,7 @@ interface AnalysisResult {
 }
 
 const Scanner = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -110,8 +110,19 @@ const Scanner = () => {
       ]
     : [];
 
+  const disclaimerText = language === "pt" 
+    ? "📸 A análise por foto é uma estimativa baseada em inteligência artificial. Para valores nutricionais precisos, consulte embalagens ou um nutricionista."
+    : "📸 Photo analysis is an AI-based estimate. For precise nutritional values, check labels or consult a nutritionist.";
+
   return (
     <AppLayout title={t("scanner.title")} subtitle={t("scanner.subtitle")}>
+      {/* Disclaimer */}
+      <div className="mb-4 p-3 bg-secondary/50 border border-border rounded-xl">
+        <p className="text-xs text-muted-foreground text-center leading-relaxed">
+          {disclaimerText}
+        </p>
+      </div>
+
       <AnimatePresence mode="wait">
         {!imagePreview ? (
           <motion.div 

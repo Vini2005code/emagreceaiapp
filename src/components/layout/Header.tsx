@@ -14,11 +14,11 @@ export function Header({ title, subtitle }: HeaderProps) {
           <img 
             src={logo} 
             alt="Emagrece AI" 
-            className="h-12 w-12 rounded-xl object-contain"
+            className="h-10 w-10 rounded-xl object-cover shadow-md"
           />
           <div>
             <h1 className="font-bold text-lg text-primary tracking-tight">
-              Emagrece <span className="text-gradient-gold">AI</span>
+              Emagrece <span className="text-accent font-extrabold">AI</span>
             </h1>
             {subtitle ? (
               <p className="text-xs text-muted-foreground">{subtitle}</p>
