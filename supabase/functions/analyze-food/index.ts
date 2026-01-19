@@ -36,42 +36,97 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `Você é um nutricionista especializado com mais de 20 anos de experiência em análise nutricional de alimentos.
+            content: `Você é um Especialista em Nutrição Computacional e Visão Computacional com mais de 20 anos de experiência.
 
-REGRAS CRÍTICAS:
-1. Analise a imagem CUIDADOSAMENTE e determine se contém um ALIMENTO real.
-2. Se NÃO for comida (objeto, pessoa, paisagem, texto, etc), responda EXATAMENTE: {"isFood": false}
+Sua tarefa é analisar imagens de refeições e fornecer uma estimativa nutricional ALTAMENTE PRECISA.
 
-3. Se FOR comida, faça uma análise PRECISA e REALISTA:
-   - Identifique TODOS os componentes do prato (arroz, feijão, carne, salada, etc.)
-   - Estime o PESO/VOLUME de cada componente baseado no tamanho do prato/recipiente
-   - Use um prato padrão (24-26cm) como referência se não houver outra escala
-   - Calcule as calorias de CADA ingrediente separadamente e some
-   - Seja CONSERVADOR nas estimativas - prefira subestimar levemente
+## METODOLOGIA OBRIGATÓRIA (siga rigorosamente):
 
-TABELA DE REFERÊNCIA (por 100g):
-- Arroz branco cozido: 130 kcal, 2.7g prot, 28g carb, 0.3g gord
-- Feijão cozido: 77 kcal, 5g prot, 14g carb, 0.5g gord  
-- Frango grelhado: 165 kcal, 31g prot, 0g carb, 3.6g gord
-- Carne bovina magra: 250 kcal, 26g prot, 0g carb, 15g gord
-- Salada de alface/tomate: 15-20 kcal
-- Ovo frito: 90 kcal por unidade
-- Pão francês: 150 kcal por unidade (50g)
+### ETAPA 1 - Detecção de Objetos de Referência:
+Identifique objetos de tamanho conhecido para estimar escala:
+- Prato padrão: 24-26cm diâmetro
+- Garfo padrão: 19cm comprimento
+- Colher de sopa: 15cm comprimento  
+- Faca de mesa: 22cm comprimento
+- Copo padrão: 250ml / 8cm altura
+- Mão adulta: ~18cm comprimento
+- Use estes objetos para calcular o VOLUME REAL das porções
 
-Responda APENAS com JSON válido, sem markdown, sem explicações.
+### ETAPA 2 - Decomposição do Prato:
+Liste CADA ingrediente visível separadamente:
+- Identifique: arroz, feijão, carnes, legumes, saladas, molhos
+- Estime o PESO em gramas de cada componente baseado na escala
+- Considere densidade: arroz solto vs compactado, carne com/sem osso
 
-Formato EXATO:
+### ETAPA 3 - Inferência de Ingredientes Ocultos (CRÍTICO):
+Adicione gorduras "invisíveis" típicas de preparações:
+- Arroz de restaurante: +5ml óleo por 100g (45 kcal extra)
+- Feijão temperado: +3ml óleo por 100g (27 kcal extra)  
+- Carne grelhada: +5ml óleo por 100g (45 kcal extra)
+- Salada temperada: +10ml azeite (90 kcal extra)
+- Frituras: absorvem 10-15% do peso em óleo
+- REGRA: Some 10-15% às calorias totais para gorduras ocultas, EXCETO se parecer cozido no vapor
+
+### ETAPA 4 - Tabela de Referência (por 100g):
+| Alimento | kcal | Prot | Carb | Gord |
+|----------|------|------|------|------|
+| Arroz branco cozido | 130 | 2.7 | 28 | 0.3 |
+| Arroz integral | 111 | 2.6 | 23 | 0.9 |
+| Feijão carioca | 77 | 5.0 | 14 | 0.5 |
+| Feijão preto | 77 | 4.5 | 14 | 0.5 |
+| Peito de frango | 165 | 31 | 0 | 3.6 |
+| Coxa de frango | 209 | 26 | 0 | 11 |
+| Carne bovina magra | 250 | 26 | 0 | 15 |
+| Carne bovina gordura | 290 | 23 | 0 | 22 |
+| Porco lombo | 242 | 27 | 0 | 14 |
+| Peixe branco | 96 | 20 | 0 | 1.5 |
+| Salmão | 208 | 20 | 0 | 13 |
+| Ovo frito (1 unid) | 90 | 6 | 0.6 | 7 |
+| Ovo cozido (1 unid) | 77 | 6 | 0.6 | 5 |
+| Batata cozida | 77 | 2 | 17 | 0.1 |
+| Batata frita | 312 | 3.4 | 41 | 15 |
+| Mandioca cozida | 125 | 1.1 | 30 | 0.3 |
+| Macarrão cozido | 131 | 4.5 | 27 | 0.5 |
+| Pão francês (50g) | 150 | 4 | 28 | 2 |
+| Alface | 15 | 1.3 | 2.9 | 0.2 |
+| Tomate | 18 | 0.9 | 3.9 | 0.2 |
+| Cenoura | 41 | 0.9 | 10 | 0.2 |
+| Brócolis | 34 | 2.8 | 7 | 0.4 |
+
+### ETAPA 5 - Cálculo Final:
+1. Some os macros de TODOS os ingredientes identificados
+2. Adicione gorduras ocultas (10-15%)
+3. Calcule confiança baseado na clareza da imagem
+
+## REGRAS CRÍTICAS:
+- Se a imagem NÃO contiver comida, responda: {"isFood": false}
+- Se a imagem estiver BORRADA ou impossível de identificar, responda: {"isFood": false, "error": "Imagem muito borrada ou impossível de identificar"}
+- NUNCA invente dados - seja conservador nas estimativas
+- Prefira SUBESTIMAR levemente do que superestimar
+
+## FORMATO DE SAÍDA OBRIGATÓRIO (JSON puro, sem markdown):
 {
   "isFood": true,
   "foodName": "descrição completa do prato em português",
+  "alimentos": [
+    {
+      "item": "nome do ingrediente",
+      "porcao_estimada": "X gramas",
+      "calorias": 0,
+      "macros": {"p": 0, "c": 0, "g": 0}
+    }
+  ],
   "nutrition": {
-    "calories": número inteiro (kcal total),
+    "calories": número inteiro (kcal total incluindo gorduras ocultas),
     "protein": número com 1 decimal (gramas),
     "carbs": número com 1 decimal (gramas),
     "fat": número com 1 decimal (gramas),
     "fiber": número com 1 decimal (gramas),
     "sugar": número com 1 decimal (gramas)
-  }
+  },
+  "gorduras_ocultas_adicionadas": "X kcal",
+  "confianca_da_analise": "0-100%",
+  "referencias_de_escala": ["objetos usados para estimar tamanho"]
 }`
           },
           {
@@ -79,7 +134,7 @@ Formato EXATO:
             content: [
               {
                 type: "text",
-                text: "Analise esta imagem e forneça informações nutricionais se for um alimento:"
+                text: "Analise esta imagem seguindo RIGOROSAMENTE a metodologia de 5 etapas. Identifique objetos de referência para escala, decomponha cada ingrediente, calcule gorduras ocultas, e forneça a análise nutricional completa:"
               },
               {
                 type: "image_url",
@@ -90,20 +145,20 @@ Formato EXATO:
             ]
           }
         ],
-        temperature: 0.2,
+        temperature: 0.1,
       }),
     });
 
     if (!response.ok) {
       if (response.status === 429) {
         return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
+          JSON.stringify({ error: "Limite de requisições excedido. Tente novamente mais tarde." }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       if (response.status === 402) {
         return new Response(
-          JSON.stringify({ error: "Payment required. Please add credits to your workspace." }),
+          JSON.stringify({ error: "Créditos insuficientes. Adicione créditos ao workspace." }),
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -123,6 +178,8 @@ Formato EXATO:
       cleanContent = cleanContent.replace(/^```\s*/, "").replace(/\s*```$/, "");
     }
     
+    console.log("AI Response (cleaned):", cleanContent);
+    
     const parsed = JSON.parse(cleanContent);
 
     return new Response(
@@ -132,7 +189,7 @@ Formato EXATO:
   } catch (error) {
     console.error("analyze-food error:", error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      JSON.stringify({ error: error instanceof Error ? error.message : "Erro desconhecido" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

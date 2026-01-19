@@ -4,6 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { AuthProvider } from "@/hooks/useAuth";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Scanner from "./pages/Scanner";
 import Recipes from "./pages/Recipes";
@@ -14,34 +16,37 @@ import Progress from "./pages/Progress";
 import MealPlan from "./pages/MealPlan";
 import Trainer from "./pages/Trainer";
 import Profile from "./pages/Profile";
+import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <LanguageProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/scanner" element={<Scanner />} />
-            <Route path="/recipes" element={<Recipes />} />
-            <Route path="/missions" element={<Missions />} />
-            <Route path="/fasting" element={<Fasting />} />
-            <Route path="/hydration" element={<Hydration />} />
-            <Route path="/progress" element={<Progress />} />
-            <Route path="/meal-plan" element={<MealPlan />} />
-            <Route path="/trainer" element={<Trainer />} />
-            <Route path="/profile" element={<Profile />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </LanguageProvider>
+    <AuthProvider>
+      <LanguageProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+              <Route path="/scanner" element={<ProtectedRoute><Scanner /></ProtectedRoute>} />
+              <Route path="/recipes" element={<ProtectedRoute><Recipes /></ProtectedRoute>} />
+              <Route path="/missions" element={<ProtectedRoute><Missions /></ProtectedRoute>} />
+              <Route path="/fasting" element={<ProtectedRoute><Fasting /></ProtectedRoute>} />
+              <Route path="/hydration" element={<ProtectedRoute><Hydration /></ProtectedRoute>} />
+              <Route path="/progress" element={<ProtectedRoute><Progress /></ProtectedRoute>} />
+              <Route path="/meal-plan" element={<ProtectedRoute><MealPlan /></ProtectedRoute>} />
+              <Route path="/trainer" element={<ProtectedRoute><Trainer /></ProtectedRoute>} />
+              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </LanguageProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 
