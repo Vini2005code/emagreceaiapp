@@ -1,4 +1,8 @@
 import { LanguageToggle } from "./LanguageToggle";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { LogOut } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import logo from "@/assets/logo.png";
 
 interface HeaderProps {
@@ -7,6 +11,14 @@ interface HeaderProps {
 }
 
 export function Header({ title, subtitle }: HeaderProps) {
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/auth");
+  };
+
   return (
     <header className="sticky top-0 z-40 glass-strong border-b border-border/30">
       <div className="container flex items-center justify-between h-16 px-4">
@@ -29,7 +41,20 @@ export function Header({ title, subtitle }: HeaderProps) {
             )}
           </div>
         </div>
-        <LanguageToggle />
+        <div className="flex items-center gap-2">
+          <LanguageToggle />
+          {user && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={handleSignOut}
+              className="text-muted-foreground hover:text-destructive"
+              title="Sair"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
     </header>
   );
