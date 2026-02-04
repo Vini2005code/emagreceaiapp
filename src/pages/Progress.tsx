@@ -1,250 +1,364 @@
-import { useState, useRef } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Camera, Plus, Calendar, ArrowLeftRight, Trash2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { 
+  Plus, 
+  Camera, 
+  ArrowLeftRight, 
+  Sparkles, 
+  Loader2,
+  Calendar,
+  TrendingUp
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/contexts/LanguageContext";
-import type { ProgressPhoto } from "@/types/app";
-
-const samplePhotos: ProgressPhoto[] = [
-  {
-    id: "1",
-    imageUrl: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=300&h=400&fit=crop",
-    date: new Date("2024-01-01"),
-    weight: 85,
-    notes: "Início da jornada",
-  },
-  {
-    id: "2",
-    imageUrl: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=300&h=400&fit=crop",
-    date: new Date("2024-02-01"),
-    weight: 82,
-    notes: "1 mês de progresso",
-  },
-];
+import { useProgressPhotos, ProgressPhoto, BodyAnalysis } from "@/hooks/useProgressPhotos";
+import { PhotoUpload } from "@/components/progress/PhotoUpload";
+import { PhotoCard } from "@/components/progress/PhotoCard";
+import { AnalysisResult } from "@/components/progress/AnalysisResult";
 
 const Progress = () => {
-  const { t, language } = useLanguage();
-  const [photos, setPhotos] = useState<ProgressPhoto[]>(samplePhotos);
+  const { language } = useLanguage();
+  const {
+    photos,
+    isLoading,
+    isUploading,
+    isAnalyzing,
+    fetchPhotos,
+    uploadPhoto,
+    getSignedUrl,
+    analyzePhotos,
+    deletePhoto,
+  } = useProgressPhotos();
+
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [compareMode, setCompareMode] = useState(false);
-  const [selectedPhotos, setSelectedPhotos] = useState<string[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedBefore, setSelectedBefore] = useState<ProgressPhoto | null>(null);
+  const [selectedAfter, setSelectedAfter] = useState<ProgressPhoto | null>(null);
+  const [currentAnalysis, setCurrentAnalysis] = useState<BodyAnalysis | null>(null);
+  const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const newPhoto: ProgressPhoto = {
-          id: Date.now().toString(),
-          imageUrl: reader.result as string,
-          date: new Date(),
-          notes: "",
-        };
-        setPhotos([newPhoto, ...photos]);
-      };
-      reader.readAsDataURL(file);
+  const t = {
+    title: language === "pt" ? "Antes e Depois" : "Before & After",
+    subtitle: language === "pt" ? "Acompanhe sua evolução" : "Track your progress",
+    addPhoto: language === "pt" ? "Adicionar Foto" : "Add Photo",
+    compare: language === "pt" ? "Comparar" : "Compare",
+    analyze: language === "pt" ? "Analisar com IA" : "Analyze with AI",
+    analyzing: language === "pt" ? "Analisando..." : "Analyzing...",
+    gallery: language === "pt" ? "Galeria" : "Gallery",
+    timeline: language === "pt" ? "Linha do Tempo" : "Timeline",
+    analysis: language === "pt" ? "Análise" : "Analysis",
+    noPhotos: language === "pt" ? "Nenhuma foto ainda" : "No photos yet",
+    noPhotosDesc: language === "pt" 
+      ? "Adicione sua primeira foto para começar a acompanhar sua evolução" 
+      : "Add your first photo to start tracking your progress",
+    selectBefore: language === "pt" ? "Selecione a foto ANTES" : "Select BEFORE photo",
+    selectAfter: language === "pt" ? "Selecione a foto DEPOIS" : "Select AFTER photo",
+    beforePhotos: language === "pt" ? "Fotos Antes" : "Before Photos",
+    afterPhotos: language === "pt" ? "Fotos Depois" : "After Photos",
+    progressPhotos: language === "pt" ? "Progresso" : "Progress",
+    all: language === "pt" ? "Todas" : "All",
+    compareDesc: language === "pt" 
+      ? "Selecione uma foto ANTES e uma DEPOIS para comparar sua evolução" 
+      : "Select a BEFORE and AFTER photo to compare your progress",
+    analyzeDesc: language === "pt"
+      ? "A IA irá analisar suas fotos e identificar mudanças corporais"
+      : "AI will analyze your photos and identify body changes",
+  };
+
+  useEffect(() => {
+    fetchPhotos();
+  }, [fetchPhotos]);
+
+  // Load signed URLs for all photos
+  useEffect(() => {
+    const loadUrls = async () => {
+      const urlPromises = photos.map(async (photo) => {
+        if (!photoUrls[photo.id]) {
+          const url = await getSignedUrl(photo.image_url);
+          return { id: photo.id, url };
+        }
+        return null;
+      });
+
+      const results = await Promise.all(urlPromises);
+      const newUrls: Record<string, string> = {};
+      results.forEach((result) => {
+        if (result?.url) {
+          newUrls[result.id] = result.url;
+        }
+      });
+
+      if (Object.keys(newUrls).length > 0) {
+        setPhotoUrls((prev) => ({ ...prev, ...newUrls }));
+      }
+    };
+
+    if (photos.length > 0) {
+      loadUrls();
     }
-  };
+  }, [photos, getSignedUrl, photoUrls]);
 
-  const togglePhotoSelection = (id: string) => {
-    if (selectedPhotos.includes(id)) {
-      setSelectedPhotos(selectedPhotos.filter((p) => p !== id));
-    } else if (selectedPhotos.length < 2) {
-      setSelectedPhotos([...selectedPhotos, id]);
-    }
-  };
-
-  const deletePhoto = (id: string) => {
-    setPhotos(photos.filter((p) => p.id !== id));
-    setSelectedPhotos(selectedPhotos.filter((p) => p !== id));
-  };
-
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString(language === "pt" ? "pt-BR" : "en-US", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  };
-
-  const comparedPhotos = selectedPhotos.map((id) =>
-    photos.find((p) => p.id === id)
+  const beforePhotos = useMemo(() => 
+    photos.filter((p) => p.photo_type === "before"), 
+    [photos]
+  );
+  
+  const afterPhotos = useMemo(() => 
+    photos.filter((p) => p.photo_type === "after"), 
+    [photos]
+  );
+  
+  const progressPhotos = useMemo(() => 
+    photos.filter((p) => p.photo_type === "progress"), 
+    [photos]
   );
 
+  const handlePhotoSelect = (photo: ProgressPhoto) => {
+    if (!compareMode) return;
+
+    if (photo.photo_type === "before") {
+      setSelectedBefore(photo);
+    } else {
+      setSelectedAfter(photo);
+    }
+  };
+
+  const handleAnalyze = async () => {
+    const analysis = await analyzePhotos(
+      selectedBefore || undefined,
+      selectedAfter || undefined
+    );
+    if (analysis) {
+      setCurrentAnalysis(analysis);
+    }
+  };
+
+  const canAnalyze = selectedBefore || selectedAfter;
+
   return (
-    <AppLayout title={t("progress.title")} subtitle={t("progress.subtitle")}>
+    <AppLayout title={t.title} subtitle={t.subtitle}>
       <div className="space-y-6">
+        {/* Action Buttons */}
         <div className="flex gap-3">
-          <Button
-            onClick={() => fileInputRef.current?.click()}
-            className="flex-1"
-          >
+          <Button onClick={() => setIsUploadOpen(true)} className="flex-1">
             <Plus className="mr-2 h-5 w-5" />
-            {t("progress.newPhoto")}
+            {t.addPhoto}
           </Button>
           <Button
-            variant={compareMode ? "accent" : "outline"}
+            variant={compareMode ? "default" : "outline"}
             onClick={() => {
               setCompareMode(!compareMode);
-              setSelectedPhotos([]);
+              if (compareMode) {
+                setSelectedBefore(null);
+                setSelectedAfter(null);
+                setCurrentAnalysis(null);
+              }
             }}
           >
             <ArrowLeftRight className="mr-2 h-5 w-5" />
-            {t("progress.compare")}
+            {t.compare}
           </Button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleFileChange}
-            className="hidden"
-          />
         </div>
 
+        {/* Compare Mode */}
         <AnimatePresence>
-          {compareMode && selectedPhotos.length === 2 && (
+          {compareMode && (
             <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="space-y-4"
             >
-              <Card variant="gradient">
-                <CardHeader>
-                  <CardTitle className="text-center">{t("progress.comparison")}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-4">
-                    {comparedPhotos.map((photo, index) =>
-                      photo ? (
-                        <div key={photo.id} className="text-center">
-                          <div className="aspect-[3/4] rounded-xl overflow-hidden mb-2">
-                            <img
-                              src={photo.imageUrl}
-                              alt={`${t("progress.title")} ${index + 1}`}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          <p className="text-sm font-semibold text-foreground">
-                            {formatDate(photo.date)}
-                          </p>
-                          {photo.weight && (
-                            <p className="text-xs text-muted-foreground">
-                              {photo.weight}kg
-                            </p>
-                          )}
+              <Card className="bg-gradient-to-br from-primary/10 to-primary/5">
+                <CardContent className="pt-6">
+                  <p className="text-sm text-muted-foreground text-center mb-4">
+                    {t.compareDesc}
+                  </p>
+
+                  {/* Selected photos preview */}
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="text-center">
+                      <p className="text-sm font-medium mb-2">{t.selectBefore}</p>
+                      {selectedBefore ? (
+                        <div className="aspect-[3/4] rounded-lg overflow-hidden bg-muted">
+                          <img
+                            src={photoUrls[selectedBefore.id]}
+                            alt="Before"
+                            className="w-full h-full object-cover"
+                          />
                         </div>
-                      ) : null
-                    )}
-                  </div>
-                  {comparedPhotos[0]?.weight && comparedPhotos[1]?.weight && (
-                    <div className="mt-4 p-3 bg-success/10 rounded-xl text-center">
-                      <p className="font-bold text-success">
-                        -{comparedPhotos[0].weight - comparedPhotos[1].weight}kg
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {t("progress.difference")}
-                      </p>
+                      ) : (
+                        <div className="aspect-[3/4] rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
+                          <Camera className="h-8 w-8 text-muted-foreground" />
+                        </div>
+                      )}
                     </div>
-                  )}
+                    <div className="text-center">
+                      <p className="text-sm font-medium mb-2">{t.selectAfter}</p>
+                      {selectedAfter ? (
+                        <div className="aspect-[3/4] rounded-lg overflow-hidden bg-muted">
+                          <img
+                            src={photoUrls[selectedAfter.id]}
+                            alt="After"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="aspect-[3/4] rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
+                          <Camera className="h-8 w-8 text-muted-foreground" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Analyze button */}
+                  <Button
+                    className="w-full"
+                    disabled={!canAnalyze || isAnalyzing}
+                    onClick={handleAnalyze}
+                  >
+                    {isAnalyzing ? (
+                      <>
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        {t.analyzing}
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="mr-2 h-5 w-5" />
+                        {t.analyze}
+                      </>
+                    )}
+                  </Button>
                 </CardContent>
               </Card>
+
+              {/* Analysis Result */}
+              {currentAnalysis && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <AnalysisResult analysis={currentAnalysis} />
+                </motion.div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
 
-        {compareMode && selectedPhotos.length < 2 && (
-          <Card variant="outline" className="border-dashed">
-            <CardContent className="py-6 text-center">
-              <ArrowLeftRight className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-              <p className="text-muted-foreground">
-                {t("progress.selectPhotos")}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {selectedPhotos.length}/2 {t("progress.selected")}
-              </p>
+        {/* Photo Gallery */}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : photos.length === 0 ? (
+          <Card className="border-dashed">
+            <CardContent className="py-12 text-center">
+              <Camera className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground mb-2">{t.noPhotos}</p>
+              <p className="text-xs text-muted-foreground">{t.noPhotosDesc}</p>
             </CardContent>
           </Card>
+        ) : (
+          <Tabs defaultValue="all" className="w-full">
+            <TabsList className="w-full grid grid-cols-4">
+              <TabsTrigger value="all">{t.all}</TabsTrigger>
+              <TabsTrigger value="before">{t.beforePhotos}</TabsTrigger>
+              <TabsTrigger value="after">{t.afterPhotos}</TabsTrigger>
+              <TabsTrigger value="progress">{t.progressPhotos}</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="all" className="mt-4">
+              <div className="grid grid-cols-2 gap-3">
+                {photos.map((photo) => (
+                  <PhotoCard
+                    key={photo.id}
+                    photo={photo}
+                    imageUrl={photoUrls[photo.id] || null}
+                    onDelete={deletePhoto}
+                    onSelect={compareMode ? handlePhotoSelect : undefined}
+                    isSelected={
+                      compareMode &&
+                      (selectedBefore?.id === photo.id || selectedAfter?.id === photo.id)
+                    }
+                  />
+                ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="before" className="mt-4">
+              {beforePhotos.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">
+                  {language === "pt" ? "Nenhuma foto 'Antes' ainda" : "No 'Before' photos yet"}
+                </p>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  {beforePhotos.map((photo) => (
+                    <PhotoCard
+                      key={photo.id}
+                      photo={photo}
+                      imageUrl={photoUrls[photo.id] || null}
+                      onDelete={deletePhoto}
+                      onSelect={compareMode ? handlePhotoSelect : undefined}
+                      isSelected={compareMode && selectedBefore?.id === photo.id}
+                    />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="after" className="mt-4">
+              {afterPhotos.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">
+                  {language === "pt" ? "Nenhuma foto 'Depois' ainda" : "No 'After' photos yet"}
+                </p>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  {afterPhotos.map((photo) => (
+                    <PhotoCard
+                      key={photo.id}
+                      photo={photo}
+                      imageUrl={photoUrls[photo.id] || null}
+                      onDelete={deletePhoto}
+                      onSelect={compareMode ? handlePhotoSelect : undefined}
+                      isSelected={compareMode && selectedAfter?.id === photo.id}
+                    />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="progress" className="mt-4">
+              {progressPhotos.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">
+                  {language === "pt" ? "Nenhuma foto de progresso ainda" : "No progress photos yet"}
+                </p>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  {progressPhotos.map((photo) => (
+                    <PhotoCard
+                      key={photo.id}
+                      photo={photo}
+                      imageUrl={photoUrls[photo.id] || null}
+                      onDelete={deletePhoto}
+                    />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         )}
 
-        <div className="space-y-4">
-          <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
-            <Camera className="h-5 w-5 text-primary" />
-            {t("progress.yourGallery")}
-          </h3>
-
-          {photos.length === 0 ? (
-            <Card variant="outline" className="border-dashed">
-              <CardContent className="py-12 text-center">
-                <Camera className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground mb-2">
-                  {t("progress.noPhotos")}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {t("progress.addFirst")}
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-2 gap-3">
-              {photos.map((photo, index) => (
-                <motion.div
-                  key={photo.id}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: index * 0.1 }}
-                >
-                  <Card
-                    variant={
-                      selectedPhotos.includes(photo.id) ? "primary" : "elevated"
-                    }
-                    className={`overflow-hidden cursor-pointer ${
-                      compareMode ? "ring-2 ring-offset-2" : ""
-                    } ${
-                      selectedPhotos.includes(photo.id)
-                        ? "ring-primary"
-                        : "ring-transparent"
-                    }`}
-                    onClick={() => compareMode && togglePhotoSelection(photo.id)}
-                  >
-                    <div className="aspect-[3/4] relative">
-                      <img
-                        src={photo.imageUrl}
-                        alt={`${t("progress.title")} ${formatDate(photo.date)}`}
-                        className="w-full h-full object-cover"
-                      />
-                      {!compareMode && (
-                        <Button
-                          size="iconSm"
-                          variant="destructive"
-                          className="absolute top-2 right-2 opacity-0 hover:opacity-100 transition-opacity"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deletePhoto(photo.id);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                    <CardContent className="p-3">
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Calendar className="h-3 w-3" />
-                        {formatDate(photo.date)}
-                      </div>
-                      {photo.weight && (
-                        <p className="font-semibold text-sm text-foreground">
-                          {photo.weight}kg
-                        </p>
-                      )}
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </div>
+        {/* Photo Upload Dialog */}
+        <PhotoUpload
+          isOpen={isUploadOpen}
+          onClose={() => setIsUploadOpen(false)}
+          onUpload={uploadPhoto}
+          isUploading={isUploading}
+        />
       </div>
     </AppLayout>
   );

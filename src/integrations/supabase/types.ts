@@ -62,6 +62,45 @@ export type Database = {
         }
         Relationships: []
       }
+      progress_photos: {
+        Row: {
+          ai_analysis: Json | null
+          created_at: string | null
+          id: string
+          image_url: string
+          notes: string | null
+          photo_type: string
+          taken_at: string | null
+          updated_at: string | null
+          user_id: string
+          weight: number | null
+        }
+        Insert: {
+          ai_analysis?: Json | null
+          created_at?: string | null
+          id?: string
+          image_url: string
+          notes?: string | null
+          photo_type: string
+          taken_at?: string | null
+          updated_at?: string | null
+          user_id: string
+          weight?: number | null
+        }
+        Update: {
+          ai_analysis?: Json | null
+          created_at?: string | null
+          id?: string
+          image_url?: string
+          notes?: string | null
+          photo_type?: string
+          taken_at?: string | null
+          updated_at?: string | null
+          user_id?: string
+          weight?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
