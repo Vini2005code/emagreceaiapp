@@ -9,5 +9,8 @@ verify_jwt = false
 [functions.analyze-body]
 verify_jwt = false
 
- [functions.generate-recipes]
- verify_jwt = false
+[functions.generate-recipes]
+verify_jwt = false
+
+[functions.generate-meal-plan]
+verify_jwt = false

@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Loader2, Mail, Lock, User, Eye, EyeOff } from "lucide-react";
+import { Loader2, Mail, Lock, User, Eye, EyeOff, CreditCard } from "lucide-react";
 import { motion } from "framer-motion";
 import logo from "@/assets/logo.png";
 import { z } from "zod";
+import { isValidCPF, formatCPF } from "@/lib/cpfValidator";
 
 const emailSchema = z.string().email("Email inválido").max(255);
 const passwordSchema = z.string().min(6, "Senha deve ter no mínimo 6 caracteres").max(72);
@@ -24,7 +25,8 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [errors, setErrors] = useState<{ email?: string; password?: string; name?: string }>({});
+  const [cpf, setCpf] = useState("");
+  const [errors, setErrors] = useState<{ email?: string; password?: string; name?: string; cpf?: string }>({});
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -42,8 +44,12 @@ const Auth = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
+  const handleCpfChange = (value: string) => {
+    setCpf(formatCPF(value));
+  };
+
   const validateInputs = () => {
-    const newErrors: { email?: string; password?: string; name?: string } = {};
+    const newErrors: { email?: string; password?: string; name?: string; cpf?: string } = {};
     
     try {
       emailSchema.parse(email);
@@ -68,6 +74,13 @@ const Auth = () => {
         if (e instanceof z.ZodError) {
           newErrors.name = e.errors[0].message;
         }
+      }
+
+      const cleanedCpf = cpf.replace(/\D/g, "");
+      if (!cleanedCpf) {
+        newErrors.cpf = "CPF é obrigatório";
+      } else if (!isValidCPF(cleanedCpf)) {
+        newErrors.cpf = "CPF inválido";
       }
     }
     
@@ -101,6 +114,20 @@ const Auth = () => {
         toast.success("Login realizado com sucesso!");
         navigate("/");
       } else {
+        // Check if CPF is already registered
+        const cleanedCpf = cpf.replace(/\D/g, "");
+        const { data: existingCpf } = await supabase
+          .from("profiles")
+          .select("cpf")
+          .eq("cpf", cleanedCpf)
+          .maybeSingle();
+
+        if (existingCpf) {
+          toast.error("Este CPF já está cadastrado. Faça login com sua conta existente.");
+          setIsLogin(true);
+          return;
+        }
+
         const redirectUrl = `${window.location.origin}/`;
         
         const { error } = await supabase.auth.signUp({
@@ -110,6 +137,7 @@ const Auth = () => {
             emailRedirectTo: redirectUrl,
             data: {
               full_name: fullName.trim(),
+              cpf: cleanedCpf,
             },
           },
         });
@@ -122,6 +150,15 @@ const Auth = () => {
             toast.error(error.message);
           }
           return;
+        }
+
+        // Update profile with CPF after signup
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          await supabase
+            .from("profiles")
+            .update({ cpf: cleanedCpf })
+            .eq("user_id", session.user.id);
         }
 
         toast.success("Conta criada com sucesso! Você já pode usar o app.");
@@ -164,22 +201,42 @@ const Auth = () => {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               {!isLogin && (
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nome completo</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="name"
-                      type="text"
-                      placeholder="Seu nome"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      className="pl-10"
-                      disabled={isLoading}
-                    />
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Nome completo</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="name"
+                        type="text"
+                        placeholder="Seu nome"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        className="pl-10"
+                        disabled={isLoading}
+                      />
+                    </div>
+                    {errors.name && <p className="text-destructive text-xs">{errors.name}</p>}
                   </div>
-                  {errors.name && <p className="text-destructive text-xs">{errors.name}</p>}
-                </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="cpf">CPF</Label>
+                    <div className="relative">
+                      <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="cpf"
+                        type="text"
+                        placeholder="000.000.000-00"
+                        value={cpf}
+                        onChange={(e) => handleCpfChange(e.target.value)}
+                        className="pl-10"
+                        disabled={isLoading}
+                        maxLength={14}
+                      />
+                    </div>
+                    {errors.cpf && <p className="text-destructive text-xs">{errors.cpf}</p>}
+                  </div>
+                </>
               )}
 
               <div className="space-y-2">
