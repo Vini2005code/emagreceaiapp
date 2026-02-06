@@ -1,90 +1,134 @@
-import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Utensils, Sparkles, Coffee, Sun, Moon, Loader2, Flame } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Utensils, Sparkles, Coffee, Sun, Moon, Loader2, Flame, Apple, Sandwich, Target } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useMealPlanGenerator, type MealPlanMeal } from "@/hooks/useMealPlanGenerator";
+import { useUserProfile } from "@/hooks/useUserProfile";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
-interface MealSuggestion {
-  name: { pt: string; en: string };
-  description: { pt: string; en: string };
-  calories: number;
-  ingredients: { pt: string[]; en: string[] };
-}
+const mealConfig = {
+  breakfast: { icon: Coffee, labelPt: "Café da Manhã", labelEn: "Breakfast" },
+  morningSnack: { icon: Apple, labelPt: "Lanche da Manhã", labelEn: "Morning Snack" },
+  lunch: { icon: Sun, labelPt: "Almoço", labelEn: "Lunch" },
+  afternoonSnack: { icon: Sandwich, labelPt: "Lanche da Tarde", labelEn: "Afternoon Snack" },
+  dinner: { icon: Moon, labelPt: "Jantar", labelEn: "Dinner" },
+} as const;
 
-interface DailyPlan {
-  breakfast: MealSuggestion;
-  lunch: MealSuggestion;
-  dinner: MealSuggestion;
-}
+type MealKey = keyof typeof mealConfig;
 
-const samplePlan: DailyPlan = {
-  breakfast: {
-    name: { pt: "Ovos mexidos com pão integral", en: "Scrambled eggs with whole wheat bread" },
-    description: { pt: "Proteína de qualidade para começar o dia", en: "Quality protein to start the day" },
-    calories: 320,
-    ingredients: { 
-      pt: ["2 ovos", "1 fatia pão integral", "azeite", "sal"],
-      en: ["2 eggs", "1 slice whole wheat bread", "olive oil", "salt"]
-    },
-  },
-  lunch: {
-    name: { pt: "Frango grelhado com arroz e feijão", en: "Grilled chicken with rice and beans" },
-    description: { pt: "Prato completo e nutritivo", en: "Complete and nutritious meal" },
-    calories: 520,
-    ingredients: { 
-      pt: ["150g frango", "4 colheres arroz", "3 colheres feijão", "salada"],
-      en: ["150g chicken", "4 tbsp rice", "3 tbsp beans", "salad"]
-    },
-  },
-  dinner: {
-    name: { pt: "Sopa de legumes com frango", en: "Vegetable soup with chicken" },
-    description: { pt: "Leve e reconfortante", en: "Light and comforting" },
-    calories: 280,
-    ingredients: { 
-      pt: ["100g frango", "cenoura", "batata", "chuchu", "temperos"],
-      en: ["100g chicken", "carrot", "potato", "chayote", "seasonings"]
-    },
-  },
-};
+const MealCard = ({ mealKey, meal, language, index }: { mealKey: MealKey; meal: MealPlanMeal; language: string; index: number }) => {
+  const config = mealConfig[mealKey];
+  const Icon = config.icon;
+  const label = language === "pt" ? config.labelPt : config.labelEn;
 
-const mealIcons = {
-  breakfast: Coffee,
-  lunch: Sun,
-  dinner: Moon,
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: index * 0.1 }}
+    >
+      <Accordion type="single" collapsible>
+        <AccordionItem value={mealKey} className="border-none">
+          <Card variant="elevated">
+            <CardHeader className="pb-2">
+              <AccordionTrigger className="hover:no-underline p-0">
+                <div className="flex items-center gap-3 w-full">
+                  <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shrink-0">
+                    <Icon className="h-5 w-5 text-primary-foreground" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <CardTitle className="text-base">{label}</CardTitle>
+                    <p className="text-sm text-muted-foreground font-normal">{meal.name}</p>
+                  </div>
+                  <div className="text-right shrink-0 mr-2">
+                    <span className="text-sm font-bold text-primary">{meal.calories} kcal</span>
+                    <div className="flex gap-1 mt-1">
+                      <Badge variant="outline" className="text-[10px] px-1 py-0">P:{meal.protein}g</Badge>
+                      <Badge variant="outline" className="text-[10px] px-1 py-0">C:{meal.carbs}g</Badge>
+                      <Badge variant="outline" className="text-[10px] px-1 py-0">G:{meal.fat}g</Badge>
+                    </div>
+                  </div>
+                </div>
+              </AccordionTrigger>
+            </CardHeader>
+            <AccordionContent>
+              <CardContent className="pt-2 space-y-3">
+                <p className="text-sm text-muted-foreground">{meal.description}</p>
+                
+                <div>
+                  <h5 className="text-xs font-semibold text-foreground mb-1">
+                    {language === "pt" ? "Ingredientes" : "Ingredients"}
+                  </h5>
+                  <div className="flex flex-wrap gap-1">
+                    {meal.ingredients.map((ing, i) => (
+                      <Badge key={i} variant="secondary" className="text-xs">
+                        {ing.amount}{ing.unit} {ing.name}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <h5 className="text-xs font-semibold text-foreground mb-1">
+                    {language === "pt" ? "Preparo" : "Instructions"}
+                  </h5>
+                  <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+                    {meal.instructions.map((step, i) => (
+                      <li key={i}>{step}</li>
+                    ))}
+                  </ol>
+                </div>
+
+                {meal.prepTime > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    ⏱ {meal.prepTime} min
+                  </p>
+                )}
+              </CardContent>
+            </AccordionContent>
+          </Card>
+        </AccordionItem>
+      </Accordion>
+    </motion.div>
+  );
 };
 
 const MealPlan = () => {
   const { t, language } = useLanguage();
-  const [plan, setPlan] = useState<DailyPlan | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
-
-  const mealLabels = {
-    breakfast: t("mealplan.breakfast"),
-    lunch: t("mealplan.lunch"),
-    dinner: t("mealplan.dinner"),
-  };
-
-  const generatePlan = () => {
-    setIsGenerating(true);
-    setTimeout(() => {
-      setPlan(samplePlan);
-      setIsGenerating(false);
-    }, 1500);
-  };
-
-  const totalCalories = plan
-    ? plan.breakfast.calories + plan.lunch.calories + plan.dinner.calories
-    : 0;
+  const { isLoading, mealPlan, totalCalories, totalMacros, generateMealPlan } = useMealPlanGenerator();
+  const { getDietRecommendation } = useUserProfile();
+  const diet = getDietRecommendation();
 
   return (
     <AppLayout title={t("mealplan.title")} subtitle={t("mealplan.subtitle")}>
-      <div className="space-y-6">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
+      <div className="space-y-4">
+        {/* Target Summary */}
+        <Card variant="gradient" className="border-primary/30">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-full bg-primary/20">
+                <Target className="h-5 w-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-foreground text-sm">
+                  {language === "pt" ? "Meta Diária" : "Daily Target"}
+                </h3>
+                <div className="grid grid-cols-4 gap-2 mt-1 text-xs text-muted-foreground">
+                  <span>{diet.calories} kcal</span>
+                  <span>P: {diet.protein}g</span>
+                  <span>C: {diet.carbs}g</span>
+                  <span>G: {diet.fat}g</span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Generate Button */}
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
           <Card variant="gradient" className="text-center">
             <CardContent className="py-6">
               <Utensils className="h-12 w-12 text-primary mx-auto mb-3" />
@@ -92,23 +136,26 @@ const MealPlan = () => {
                 {t("mealplan.dontKnow")}
               </h2>
               <p className="text-muted-foreground mb-4 text-sm">
-                {t("mealplan.suggestion")}
+                {language === "pt" 
+                  ? "A IA gera um cardápio completo e personalizado para o seu dia"
+                  : "AI generates a complete personalized menu for your day"}
               </p>
               <Button
                 size="lg"
-                onClick={generatePlan}
-                disabled={isGenerating}
+                variant="cta"
+                onClick={generateMealPlan}
+                disabled={isLoading}
                 className="min-w-[200px]"
               >
-                {isGenerating ? (
+                {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    {t("mealplan.generating")}
+                    {language === "pt" ? "Gerando cardápio com IA..." : "Generating with AI..."}
                   </>
                 ) : (
                   <>
                     <Sparkles className="mr-2 h-5 w-5" />
-                    {t("mealplan.generate")}
+                    {mealPlan ? t("mealplan.newMenu") : t("mealplan.generate")}
                   </>
                 )}
               </Button>
@@ -117,76 +164,47 @@ const MealPlan = () => {
         </motion.div>
 
         <AnimatePresence>
-          {plan && (
+          {mealPlan && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="space-y-4"
+              className="space-y-3"
             >
+              {/* Daily Total */}
               <Card variant="accent" className="text-center">
-                <CardContent className="py-4">
-                  <div className="flex items-center justify-center gap-2">
+                <CardContent className="py-3">
+                  <div className="flex items-center justify-center gap-2 mb-1">
                     <Flame className="h-5 w-5 text-accent-foreground" />
                     <span className="text-2xl font-bold text-accent-foreground">
                       {totalCalories}
                     </span>
                     <span className="text-accent-foreground/80">{t("mealplan.totalKcal")}</span>
                   </div>
+                  {totalMacros && (
+                    <div className="flex justify-center gap-3 text-xs text-accent-foreground/70">
+                      <span>P: {totalMacros.protein}g</span>
+                      <span>C: {totalMacros.carbs}g</span>
+                      <span>G: {totalMacros.fat}g</span>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
-              {(["breakfast", "lunch", "dinner"] as const).map((mealType, index) => {
-                const meal = plan[mealType];
-                const Icon = mealIcons[mealType];
-                return (
-                  <motion.div
-                    key={mealType}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.15 }}
-                  >
-                    <Card variant="elevated">
-                      <CardHeader className="pb-2">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
-                            <Icon className="h-5 w-5 text-primary-foreground" />
-                          </div>
-                          <div className="flex-1">
-                            <CardTitle className="text-base">
-                              {mealLabels[mealType]}
-                            </CardTitle>
-                            <p className="text-xs text-muted-foreground">
-                              {meal.calories} kcal
-                            </p>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <h4 className="font-bold text-foreground mb-1">
-                          {meal.name[language]}
-                        </h4>
-                        <p className="text-sm text-muted-foreground mb-3">
-                          {meal.description[language]}
-                        </p>
-                        <div className="flex flex-wrap gap-1">
-                          {meal.ingredients[language].map((ing) => (
-                            <span
-                              key={ing}
-                              className="text-xs bg-secondary px-2 py-1 rounded-lg text-secondary-foreground"
-                            >
-                              {ing}
-                            </span>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                );
-              })}
+              {/* Meals */}
+              {(Object.keys(mealConfig) as MealKey[]).map((key, index) => (
+                <MealCard
+                  key={key}
+                  mealKey={key}
+                  meal={mealPlan[key]}
+                  language={language}
+                  index={index}
+                />
+              ))}
 
               <Button
                 variant="outline"
-                onClick={generatePlan}
+                onClick={generateMealPlan}
+                disabled={isLoading}
                 className="w-full"
               >
                 <Sparkles className="mr-2 h-4 w-4" />

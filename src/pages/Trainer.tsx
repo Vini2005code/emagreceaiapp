@@ -7,6 +7,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { AlertTriangle, Send, Loader2 } from "lucide-react";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useToast } from "@/hooks/use-toast";
+import ReactMarkdown from "react-markdown";
 
 interface Message {
   role: "user" | "assistant";
@@ -15,29 +16,17 @@ interface Message {
 
 export default function Trainer() {
   const { t, language } = useLanguage();
-  const { profile } = useUserProfile();
+  const { profile, calculateBMI, getBMICategory, calculateTDEE, getDietRecommendation } = useUserProfile();
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const bmi = useMemo(() => {
-    if (profile.weight && profile.height) {
-      const heightInMeters = profile.height / 100;
-      return profile.weight / (heightInMeters * heightInMeters);
-    }
-    return null;
-  }, [profile.weight, profile.height]);
+  const bmi = useMemo(() => calculateBMI(), [profile.weight, profile.height]);
+  const bmiCategory = useMemo(() => getBMICategory(bmi), [bmi]);
+  const diet = useMemo(() => getDietRecommendation(), [profile]);
 
-  const getBmiCategory = (bmi: number): string => {
-    if (bmi < 18.5) return "underweight";
-    if (bmi < 25) return "normal";
-    if (bmi < 30) return "overweight";
-    return "obese";
-  };
-
-  // All available suggestions
   const allSuggestionsPt = [
     "Como perder gordura abdominal?",
     "Qual a melhor dieta para emagrecer?",
@@ -68,13 +57,11 @@ export default function Trainer() {
     "Tips to reduce food anxiety"
   ];
 
-  // Get daily random suggestions based on date
   const dailySuggestions = useMemo(() => {
     const allSuggestions = language === "pt" ? allSuggestionsPt : allSuggestionsEn;
     const today = new Date();
     const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
     
-    // Simple shuffle based on date seed
     const shuffled = [...allSuggestions].sort((a, b) => {
       const hashA = (seed * a.length) % 1000;
       const hashB = (seed * b.length) % 1000;
@@ -92,6 +79,27 @@ export default function Trainer() {
     scrollToBottom();
   }, [messages]);
 
+  const buildUserProfile = useCallback(() => {
+    if (!bmi) return null;
+    return {
+      weight: profile.weight,
+      height: profile.height,
+      age: profile.age,
+      gender: profile.gender,
+      bmi,
+      bmiCategory,
+      activityLevel: profile.activityLevel,
+      goalWeight: profile.goalWeight,
+      bodyType: profile.bodyType,
+      foodPreferences: profile.foodPreferences,
+      medicalLimitations: profile.medicalLimitations,
+      dailyRoutine: profile.dailyRoutine,
+      tdee: diet.tdee,
+      calories: diet.calories,
+      deficit: diet.deficit,
+    };
+  }, [bmi, bmiCategory, profile, diet]);
+
   const streamChat = useCallback(async (userMessage: string) => {
     const newMessages: Message[] = [...messages, { role: "user", content: userMessage }];
     setMessages(newMessages);
@@ -100,14 +108,6 @@ export default function Trainer() {
     let assistantContent = "";
 
     try {
-      const userProfile = bmi ? {
-        weight: profile.weight,
-        height: profile.height,
-        age: profile.age,
-        bmi,
-        bmiCategory: getBmiCategory(bmi)
-      } : null;
-
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/trainer-chat`, {
         method: "POST",
         headers: {
@@ -116,7 +116,7 @@ export default function Trainer() {
         },
         body: JSON.stringify({ 
           messages: newMessages,
-          userProfile
+          userProfile: buildUserProfile(),
         }),
       });
 
@@ -183,7 +183,7 @@ export default function Trainer() {
     } finally {
       setIsLoading(false);
     }
-  }, [messages, bmi, profile, language, toast]);
+  }, [messages, buildUserProfile, language, toast]);
 
   const handleSend = () => {
     if (!input.trim() || isLoading) return;
@@ -221,7 +221,6 @@ export default function Trainer() {
                   : "Hi! I'm your virtual trainer. How can I help you today?"}
               </p>
               
-              {/* Suggestion bubbles */}
               <div className="flex flex-wrap justify-center gap-2 max-w-md">
                 {dailySuggestions.map((suggestion, index) => (
                   <button
@@ -242,13 +241,19 @@ export default function Trainer() {
                   className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`max-w-[80%] rounded-2xl px-4 py-2 ${
+                    className={`max-w-[85%] rounded-2xl px-4 py-2 ${
                       message.role === "user"
                         ? "bg-primary text-primary-foreground"
                         : "bg-muted text-foreground"
                     }`}
                   >
-                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                    {message.role === "assistant" ? (
+                      <div className="text-sm prose prose-sm dark:prose-invert max-w-none [&>p]:my-1 [&>ul]:my-1 [&>ol]:my-1">
+                        <ReactMarkdown>{message.content}</ReactMarkdown>
+                      </div>
+                    ) : (
+                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                    )}
                   </div>
                 </div>
               ))}

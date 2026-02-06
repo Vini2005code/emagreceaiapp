@@ -19,13 +19,19 @@ export type Database = {
           activity_level: string | null
           age: number | null
           avatar_url: string | null
+          body_type: string | null
+          cpf: string | null
           created_at: string
+          daily_routine: string | null
           email: string | null
+          food_preferences: string[] | null
           full_name: string | null
           gender: string | null
           goal: string | null
+          goal_weight: number | null
           height: number | null
           id: string
+          medical_limitations: string[] | null
           updated_at: string
           user_id: string
           weight: number | null
@@ -34,13 +40,19 @@ export type Database = {
           activity_level?: string | null
           age?: number | null
           avatar_url?: string | null
+          body_type?: string | null
+          cpf?: string | null
           created_at?: string
+          daily_routine?: string | null
           email?: string | null
+          food_preferences?: string[] | null
           full_name?: string | null
           gender?: string | null
           goal?: string | null
+          goal_weight?: number | null
           height?: number | null
           id?: string
+          medical_limitations?: string[] | null
           updated_at?: string
           user_id: string
           weight?: number | null
@@ -49,13 +61,19 @@ export type Database = {
           activity_level?: string | null
           age?: number | null
           avatar_url?: string | null
+          body_type?: string | null
+          cpf?: string | null
           created_at?: string
+          daily_routine?: string | null
           email?: string | null
+          food_preferences?: string[] | null
           full_name?: string | null
           gender?: string | null
           goal?: string | null
+          goal_weight?: number | null
           height?: number | null
           id?: string
+          medical_limitations?: string[] | null
           updated_at?: string
           user_id?: string
           weight?: number | null
