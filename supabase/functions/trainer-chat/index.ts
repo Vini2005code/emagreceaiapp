@@ -1,14 +1,19 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const FUNCTION_NAME = "trainer-chat";
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const startTime = Date.now();
 
   try {
     const { messages, userProfile } = await req.json();
@@ -25,33 +30,79 @@ serve(async (req) => {
       });
     }
 
+    // --- Rate Limiting ---
+    const authHeader = req.headers.get("authorization");
+    let userId: string | null = null;
+    if (authHeader) {
+      const supabase = createClient(
+        Deno.env.get("SUPABASE_URL") ?? "",
+        Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+        { global: { headers: { Authorization: authHeader } } }
+      );
+      const { data: { user } } = await supabase.auth.getUser();
+      userId = user?.id ?? null;
+
+      if (userId) {
+        // Check daily limit
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const adminClient = createClient(
+          Deno.env.get("SUPABASE_URL") ?? "",
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+        );
+
+        // Get user plan limits
+        const { data: sub } = await adminClient
+          .from("user_subscriptions")
+          .select("plan_id")
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        const planId = sub?.plan_id || "free";
+        const { data: plan } = await adminClient
+          .from("subscription_plans")
+          .select("ai_daily_limit")
+          .eq("id", planId)
+          .maybeSingle();
+
+        const dailyLimit = plan?.ai_daily_limit || 5;
+
+        const { count } = await adminClient
+          .from("ai_usage_logs")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", userId)
+          .eq("function_name", FUNCTION_NAME)
+          .gte("created_at", today.toISOString());
+
+        if ((count || 0) >= dailyLimit) {
+          return new Response(JSON.stringify({ 
+            error: "Limite diário de uso atingido. Faça upgrade do seu plano para mais acesso.",
+            limit_reached: true
+          }), {
+            status: 429,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+    }
+
     // Build rich context from user profile
     let profileContext = "";
     if (userProfile) {
       const { weight, height, age, bmi, bmiCategory, gender, activityLevel, goalWeight, bodyType, foodPreferences, medicalLimitations, dailyRoutine, tdee, deficit, calories } = userProfile;
       
       const bmiLabels: Record<string, string> = {
-        underweight: "Abaixo do peso",
-        normal: "Peso normal",
-        overweight: "Sobrepeso",
-        obese: "Obesidade",
-        obese1: "Obesidade grau I",
-        obese2: "Obesidade grau II",
-        obese3: "Obesidade grau III",
+        underweight: "Abaixo do peso", normal: "Peso normal", overweight: "Sobrepeso",
+        obese: "Obesidade", obese1: "Obesidade grau I", obese2: "Obesidade grau II", obese3: "Obesidade grau III",
       };
 
       const activityLabels: Record<string, string> = {
-        sedentary: "Sedentário",
-        light: "Leve",
-        moderate: "Moderado",
-        active: "Ativo",
-        veryActive: "Muito ativo",
+        sedentary: "Sedentário", light: "Leve", moderate: "Moderado", active: "Ativo", veryActive: "Muito ativo",
       };
 
       const bodyTypeLabels: Record<string, string> = {
-        ectomorph: "Ectomorfo",
-        mesomorph: "Mesomorfo",
-        endomorph: "Endomorfo",
+        ectomorph: "Ectomorfo", mesomorph: "Mesomorfo", endomorph: "Endomorfo",
       };
 
       profileContext = `
@@ -91,18 +142,14 @@ REGRAS OBRIGATÓRIAS:
 5. Forneça informações baseadas em ciência e estudos quando possível
 6. Calcule e sugira valores específicos baseados nos dados do usuário
 7. Se o usuário tem limitações médicas, SEMPRE considere-as
+8. NUNCA faça promessas de resultados médicos específicos
+9. Use linguagem que EVITA termos como "prescrição", "tratamento", "cura"
 
-ÁREAS DE COMPETÊNCIA:
-- Orientação alimentar personalizada
-- Hábitos saudáveis
-- Sugestões de ajustes no plano
-- Acompanhamento de progresso
-- Dúvidas nutricionais
-- Motivação e mindset
-- Exercícios e atividades físicas
+CLASSIFICAÇÃO DE RESPOSTA SENSÍVEL:
+- Se a pergunta envolver condições médicas graves, medicamentos ou sintomas, SEMPRE inclua: "⚠️ Para esta questão, consulte um profissional de saúde."
 ${profileContext}`;
 
-    console.log("Trainer chat - messages:", messages.length, "has profile:", !!userProfile);
+    console.log(`[${FUNCTION_NAME}] messages: ${messages.length}, has profile: ${!!userProfile}, user: ${userId?.slice(0, 8)}`);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -114,7 +161,7 @@ ${profileContext}`;
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
-          ...messages.slice(-20), // Keep last 20 messages for context
+          ...messages.slice(-20),
         ],
         stream: true,
         temperature: 0.7,
@@ -123,17 +170,29 @@ ${profileContext}`;
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
-      
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Limite de requisições atingido. Aguarde alguns segundos." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+      console.error(`[${FUNCTION_NAME}] AI gateway error:`, response.status, errorText);
+
+      // Log failure
+      if (userId) {
+        const adminClient = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
+        await adminClient.from("ai_usage_logs").insert({
+          user_id: userId,
+          function_name: FUNCTION_NAME,
+          model: "google/gemini-2.5-flash",
+          success: false,
+          error_message: `HTTP ${response.status}`,
+          response_time_ms: Date.now() - startTime,
         });
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos insuficientes." }), {
-          status: 402,
+
+      // Fallback response
+      if (response.status === 429 || response.status === 402 || response.status >= 500) {
+        const fallbackMsg = "Desculpe, estou com dificuldade para responder agora. Tente novamente em alguns segundos. 🙏";
+        return new Response(JSON.stringify({ 
+          choices: [{ message: { role: "assistant", content: fallbackMsg } }],
+          fallback: true 
+        }), {
+          status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
@@ -144,13 +203,31 @@ ${profileContext}`;
       });
     }
 
+    // Log success
+    if (userId) {
+      const adminClient = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
+      await adminClient.from("ai_usage_logs").insert({
+        user_id: userId,
+        function_name: FUNCTION_NAME,
+        model: "google/gemini-2.5-flash",
+        success: true,
+        response_time_ms: Date.now() - startTime,
+      });
+    }
+
     return new Response(response.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (error) {
-    console.error("Trainer chat error:", error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Erro desconhecido" }), {
-      status: 500,
+    console.error(`[${FUNCTION_NAME}] Error:`, error);
+    
+    // Fallback: never crash the app
+    const fallbackMsg = "Desculpe, ocorreu um erro inesperado. Tente novamente em instantes.";
+    return new Response(JSON.stringify({ 
+      choices: [{ message: { role: "assistant", content: fallbackMsg } }],
+      fallback: true 
+    }), {
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
