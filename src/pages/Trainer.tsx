@@ -4,8 +4,10 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { AlertTriangle, Send, Loader2 } from "lucide-react";
+import { AlertTriangle, Send, Loader2, Lock } from "lucide-react";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useSubscription } from "@/hooks/useSubscription";
+import { useAnalytics } from "@/hooks/useAnalytics";
 import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
 
@@ -18,9 +20,12 @@ export default function Trainer() {
   const { t, language } = useLanguage();
   const { profile, calculateBMI, getBMICategory, calculateTDEE, getDietRecommendation } = useUserProfile();
   const { toast } = useToast();
+  const { checkLimit } = useSubscription();
+  const { track } = useAnalytics();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [limitReached, setLimitReached] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const bmi = useMemo(() => calculateBMI(), [profile.weight, profile.height]);
@@ -101,9 +106,22 @@ export default function Trainer() {
   }, [bmi, bmiCategory, profile, diet]);
 
   const streamChat = useCallback(async (userMessage: string) => {
+    // Check rate limit before sending
+    const { allowed, remaining } = await checkLimit("trainer-chat");
+    if (!allowed) {
+      setLimitReached(true);
+      toast({
+        title: language === "pt" ? "Limite diário atingido" : "Daily limit reached",
+        description: language === "pt" ? "Faça upgrade para mais acesso ao treinador." : "Upgrade for more trainer access.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const newMessages: Message[] = [...messages, { role: "user", content: userMessage }];
     setMessages(newMessages);
     setIsLoading(true);
+    track("trainer_chat_sent");
 
     let assistantContent = "";
 
@@ -122,11 +140,36 @@ export default function Trainer() {
 
       if (!response.ok) {
         const errorData = await response.json();
+        if (errorData.limit_reached) {
+          setLimitReached(true);
+          toast({
+            title: language === "pt" ? "Limite diário atingido" : "Daily limit reached",
+            description: language === "pt" ? "Faça upgrade para mais acesso." : "Upgrade for more access.",
+            variant: "destructive"
+          });
+          // Remove the user message we just added
+          setMessages(messages);
+          return;
+        }
+        // Check for fallback response
+        if (errorData.fallback && errorData.choices?.[0]?.message?.content) {
+          setMessages([...newMessages, { role: "assistant", content: errorData.choices[0].message.content }]);
+          return;
+        }
         throw new Error(errorData.error || "Failed to get response");
       }
 
-      if (!response.body) throw new Error("No response body");
+      // Check if it's a non-streaming fallback
+      const contentType = response.headers.get("content-type") || "";
+      if (contentType.includes("application/json")) {
+        const data = await response.json();
+        if (data.choices?.[0]?.message?.content) {
+          setMessages([...newMessages, { role: "assistant", content: data.choices[0].message.content }]);
+          return;
+        }
+      }
 
+      if (!response.body) throw new Error("No response body");
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let textBuffer = "";
@@ -183,7 +226,7 @@ export default function Trainer() {
     } finally {
       setIsLoading(false);
     }
-  }, [messages, buildUserProfile, language, toast]);
+  }, [messages, buildUserProfile, language, toast, checkLimit, track]);
 
   const handleSend = () => {
     if (!input.trim() || isLoading) return;
@@ -271,19 +314,26 @@ export default function Trainer() {
 
         {/* Input */}
         <div className="p-4 border-t border-border/50">
-          <div className="flex gap-2">
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
-              placeholder={language === "pt" ? "Digite sua pergunta..." : "Type your question..."}
-              disabled={isLoading}
-              className="flex-1"
-            />
-            <Button onClick={handleSend} disabled={!input.trim() || isLoading} size="icon" className="bg-primary text-primary-foreground hover:bg-primary/90">
-              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            </Button>
-          </div>
+          {limitReached ? (
+            <div className="flex items-center gap-2 justify-center text-muted-foreground text-sm py-2">
+              <Lock className="h-4 w-4" />
+              {language === "pt" ? "Limite diário atingido. Faça upgrade para continuar." : "Daily limit reached. Upgrade to continue."}
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <Input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+                placeholder={language === "pt" ? "Digite sua pergunta..." : "Type your question..."}
+                disabled={isLoading}
+                className="flex-1"
+              />
+              <Button onClick={handleSend} disabled={!input.trim() || isLoading} size="icon" className="bg-primary text-primary-foreground hover:bg-primary/90">
+                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </AppLayout>

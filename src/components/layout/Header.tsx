@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { FeedbackDialog } from "@/components/feedback/FeedbackDialog";
 import logo from "@/assets/logo.png";
 
 interface HeaderProps {
@@ -41,7 +42,8 @@ export function Header({ title, subtitle }: HeaderProps) {
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
+          <FeedbackDialog />
           <LanguageToggle />
           {user && (
             <Button 
