@@ -14,6 +14,114 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_usage_logs: {
+        Row: {
+          cached: boolean
+          created_at: string
+          error_message: string | null
+          function_name: string
+          id: string
+          model: string | null
+          response_time_ms: number | null
+          success: boolean
+          tokens_input: number | null
+          tokens_output: number | null
+          user_id: string
+        }
+        Insert: {
+          cached?: boolean
+          created_at?: string
+          error_message?: string | null
+          function_name: string
+          id?: string
+          model?: string | null
+          response_time_ms?: number | null
+          success?: boolean
+          tokens_input?: number | null
+          tokens_output?: number | null
+          user_id: string
+        }
+        Update: {
+          cached?: boolean
+          created_at?: string
+          error_message?: string | null
+          function_name?: string
+          id?: string
+          model?: string | null
+          response_time_ms?: number | null
+          success?: boolean
+          tokens_input?: number | null
+          tokens_output?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      analytics_events: {
+        Row: {
+          created_at: string
+          event_data: Json | null
+          event_name: string
+          id: string
+          session_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_data?: Json | null
+          event_name: string
+          id?: string
+          session_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_data?: Json | null
+          event_name?: string
+          id?: string
+          session_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      consent_records: {
+        Row: {
+          consent_type: string
+          created_at: string
+          granted: boolean
+          granted_at: string | null
+          id: string
+          ip_address: string | null
+          revoked_at: string | null
+          user_agent: string | null
+          user_id: string
+          version: string
+        }
+        Insert: {
+          consent_type: string
+          created_at?: string
+          granted?: boolean
+          granted_at?: string | null
+          id?: string
+          ip_address?: string | null
+          revoked_at?: string | null
+          user_agent?: string | null
+          user_id: string
+          version?: string
+        }
+        Update: {
+          consent_type?: string
+          created_at?: string
+          granted?: boolean
+          granted_at?: string | null
+          id?: string
+          ip_address?: string | null
+          revoked_at?: string | null
+          user_agent?: string | null
+          user_id?: string
+          version?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           activity_level: string | null
@@ -32,6 +140,7 @@ export type Database = {
           height: number | null
           id: string
           medical_limitations: string[] | null
+          onboarding_completed: boolean | null
           updated_at: string
           user_id: string
           weight: number | null
@@ -53,6 +162,7 @@ export type Database = {
           height?: number | null
           id?: string
           medical_limitations?: string[] | null
+          onboarding_completed?: boolean | null
           updated_at?: string
           user_id: string
           weight?: number | null
@@ -74,6 +184,7 @@ export type Database = {
           height?: number | null
           id?: string
           medical_limitations?: string[] | null
+          onboarding_completed?: boolean | null
           updated_at?: string
           user_id?: string
           weight?: number | null
@@ -118,6 +229,128 @@ export type Database = {
           weight?: number | null
         }
         Relationships: []
+      }
+      subscription_plans: {
+        Row: {
+          ai_daily_limit: number
+          created_at: string
+          features: Json
+          id: string
+          is_active: boolean
+          meal_plan_daily_limit: number
+          name: string
+          price_monthly: number | null
+          price_yearly: number | null
+          recipes_daily_limit: number
+          scanner_daily_limit: number
+        }
+        Insert: {
+          ai_daily_limit?: number
+          created_at?: string
+          features?: Json
+          id: string
+          is_active?: boolean
+          meal_plan_daily_limit?: number
+          name: string
+          price_monthly?: number | null
+          price_yearly?: number | null
+          recipes_daily_limit?: number
+          scanner_daily_limit?: number
+        }
+        Update: {
+          ai_daily_limit?: number
+          created_at?: string
+          features?: Json
+          id?: string
+          is_active?: boolean
+          meal_plan_daily_limit?: number
+          name?: string
+          price_monthly?: number | null
+          price_yearly?: number | null
+          recipes_daily_limit?: number
+          scanner_daily_limit?: number
+        }
+        Relationships: []
+      }
+      user_feedback: {
+        Row: {
+          category: string | null
+          created_at: string
+          id: string
+          message: string
+          status: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          message: string
+          status?: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          message?: string
+          status?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_subscriptions: {
+        Row: {
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          external_customer_id: string | null
+          external_subscription_id: string | null
+          id: string
+          payment_provider: string | null
+          plan_id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          external_customer_id?: string | null
+          external_subscription_id?: string | null
+          id?: string
+          payment_provider?: string | null
+          plan_id?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          external_customer_id?: string | null
+          external_subscription_id?: string | null
+          id?: string
+          payment_provider?: string | null
+          plan_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
