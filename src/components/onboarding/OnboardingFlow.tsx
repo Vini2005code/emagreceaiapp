@@ -20,6 +20,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
   const [acceptedAI, setAcceptedAI] = useState(false);
+  const [acceptedHealthData, setAcceptedHealthData] = useState(false);
 
   const pt = language === "pt";
 
@@ -57,8 +58,8 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
   const handleNext = async () => {
     if (step === steps.length - 1) {
-      if (!acceptedTerms || !acceptedPrivacy || !acceptedAI) return;
-      await grantConsent(["terms_of_use", "privacy_policy", "ai_usage"]);
+      if (!acceptedTerms || !acceptedPrivacy || !acceptedAI || !acceptedHealthData) return;
+      await grantConsent(["terms_of_use", "privacy_policy", "ai_usage", "image_analysis"]);
       track("onboarding_completed");
       onComplete();
     } else {
@@ -69,7 +70,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
   const current = steps[step];
   const isLast = step === steps.length - 1;
-  const canProceed = isLast ? acceptedTerms && acceptedPrivacy && acceptedAI : true;
+  const canProceed = isLast ? acceptedTerms && acceptedPrivacy && acceptedAI && acceptedHealthData : true;
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -122,6 +123,14 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                         {pt
                           ? "Autorizo o uso de IA para análise de dados e recomendações personalizadas"
                           : "I authorize the use of AI for data analysis and personalized recommendations"}
+                      </span>
+                    </label>
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <Checkbox checked={acceptedHealthData} onCheckedChange={(v) => setAcceptedHealthData(!!v)} className="mt-0.5" />
+                      <span className="text-xs text-muted-foreground">
+                        {pt
+                          ? "Autorizo o tratamento de dados sensíveis de saúde (peso, medidas corporais, fotos de progresso e informações médicas) conforme a LGPD Art. 11"
+                          : "I authorize the processing of sensitive health data (weight, body measurements, progress photos and medical information) per LGPD Art. 11"}
                       </span>
                     </label>
                   </div>

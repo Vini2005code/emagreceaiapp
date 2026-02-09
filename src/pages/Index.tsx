@@ -5,6 +5,8 @@ import { DailyMissions } from "@/components/dashboard/DailyMissions";
 import { WaterProgress } from "@/components/dashboard/WaterProgress";
 import { FastingWidget } from "@/components/dashboard/FastingWidget";
 import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
+import { ReminderSettings } from "@/components/notifications/ReminderSettings";
+import { HealthDataCard } from "@/components/health/HealthDataCard";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useAnalytics } from "@/hooks/useAnalytics";
@@ -91,6 +93,16 @@ const Index = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
+          className="grid grid-cols-1 md:grid-cols-2 gap-4"
+        >
+          <ReminderSettings />
+          <HealthDataCard />
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
         >
           <h3 className="text-lg font-bold mb-3 text-foreground">
             {t("home.quickAccess")}
