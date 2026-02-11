@@ -4,12 +4,13 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { AlertTriangle, Send, Loader2, Lock } from "lucide-react";
+import { Sparkles, Send, Loader2, Crown, MessageSquare, AlertCircle } from "lucide-react";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Message {
   role: "user" | "assistant";
@@ -18,9 +19,9 @@ interface Message {
 
 export default function Trainer() {
   const { t, language } = useLanguage();
-  const { profile, calculateBMI, getBMICategory, calculateTDEE, getDietRecommendation } = useUserProfile();
+  const { profile, calculateBMI, getBMICategory, getDietRecommendation } = useUserProfile();
   const { toast } = useToast();
-  const { checkLimit } = useSubscription();
+  const { checkLimit, isPro } = useSubscription();
   const { track } = useAnalytics();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -32,49 +33,14 @@ export default function Trainer() {
   const bmiCategory = useMemo(() => getBMICategory(bmi), [bmi]);
   const diet = useMemo(() => getDietRecommendation(), [profile]);
 
-  const allSuggestionsPt = [
-    "Como perder gordura abdominal?",
-    "Qual a melhor dieta para emagrecer?",
-    "Quantas calorias devo comer por dia?",
-    "Exercícios para fazer em casa",
-    "Como manter a motivação?",
-    "Jejum intermitente funciona?",
-    "Dicas para acelerar o metabolismo",
-    "Melhores alimentos para emagrecer",
-    "Como evitar o efeito sanfona?",
-    "Exercícios para queimar gordura",
-    "O que comer antes de treinar?",
-    "Dicas para diminuir a ansiedade alimentar"
-  ];
-
-  const allSuggestionsEn = [
-    "How to lose belly fat?",
-    "What's the best diet for weight loss?",
-    "How many calories should I eat daily?",
-    "Home workout exercises",
-    "How to stay motivated?",
-    "Does intermittent fasting work?",
-    "Tips to boost metabolism",
-    "Best foods for weight loss",
-    "How to avoid yo-yo dieting?",
-    "Fat burning exercises",
-    "What to eat before training?",
-    "Tips to reduce food anxiety"
-  ];
+  const pt = language === "pt";
 
   const dailySuggestions = useMemo(() => {
-    const allSuggestions = language === "pt" ? allSuggestionsPt : allSuggestionsEn;
-    const today = new Date();
-    const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
-    
-    const shuffled = [...allSuggestions].sort((a, b) => {
-      const hashA = (seed * a.length) % 1000;
-      const hashB = (seed * b.length) % 1000;
-      return hashA - hashB;
-    });
-    
-    return shuffled.slice(0, 6);
-  }, [language]);
+    const suggestions = pt 
+      ? ["Como perder gordura abdominal?", "Treino rápido para casa", "O que comer pré-treino?", "Dicas de jejum"]
+      : ["How to lose belly fat?", "Quick home workout", "Pre-workout meal ideas", "Fasting tips"];
+    return suggestions;
+  }, [pt]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -89,32 +55,19 @@ export default function Trainer() {
     return {
       weight: profile.weight,
       height: profile.height,
-      age: profile.age,
-      gender: profile.gender,
       bmi,
       bmiCategory,
       activityLevel: profile.activityLevel,
       goalWeight: profile.goalWeight,
-      bodyType: profile.bodyType,
-      foodPreferences: profile.foodPreferences,
-      medicalLimitations: profile.medicalLimitations,
-      dailyRoutine: profile.dailyRoutine,
       tdee: diet.tdee,
       calories: diet.calories,
-      deficit: diet.deficit,
     };
   }, [bmi, bmiCategory, profile, diet]);
 
   const streamChat = useCallback(async (userMessage: string) => {
-    // Check rate limit before sending
-    const { allowed, remaining } = await checkLimit("trainer-chat");
-    if (!allowed) {
+    const { allowed } = await checkLimit("trainer-chat");
+    if (!allowed && !isPro) {
       setLimitReached(true);
-      toast({
-        title: language === "pt" ? "Limite diário atingido" : "Daily limit reached",
-        description: language === "pt" ? "Faça upgrade para mais acesso ao treinador." : "Upgrade for more trainer access.",
-        variant: "destructive"
-      });
       return;
     }
 
@@ -122,8 +75,6 @@ export default function Trainer() {
     setMessages(newMessages);
     setIsLoading(true);
     track("trainer_chat_sent");
-
-    let assistantContent = "";
 
     try {
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/trainer-chat`, {
@@ -138,95 +89,19 @@ export default function Trainer() {
         }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        if (errorData.limit_reached) {
-          setLimitReached(true);
-          toast({
-            title: language === "pt" ? "Limite diário atingido" : "Daily limit reached",
-            description: language === "pt" ? "Faça upgrade para mais acesso." : "Upgrade for more access.",
-            variant: "destructive"
-          });
-          // Remove the user message we just added
-          setMessages(messages);
-          return;
-        }
-        // Check for fallback response
-        if (errorData.fallback && errorData.choices?.[0]?.message?.content) {
-          setMessages([...newMessages, { role: "assistant", content: errorData.choices[0].message.content }]);
-          return;
-        }
-        throw new Error(errorData.error || "Failed to get response");
-      }
+      if (!response.ok) throw new Error("Falha na conexão");
 
-      // Check if it's a non-streaming fallback
-      const contentType = response.headers.get("content-type") || "";
-      if (contentType.includes("application/json")) {
-        const data = await response.json();
-        if (data.choices?.[0]?.message?.content) {
-          setMessages([...newMessages, { role: "assistant", content: data.choices[0].message.content }]);
-          return;
-        }
-      }
-
-      if (!response.body) throw new Error("No response body");
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let textBuffer = "";
-
-      const updateAssistant = (content: string) => {
-        assistantContent = content;
-        setMessages(prev => {
-          const last = prev[prev.length - 1];
-          if (last?.role === "assistant") {
-            return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: assistantContent } : m));
-          }
-          return [...prev, { role: "assistant", content: assistantContent }];
-        });
-      };
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        textBuffer += decoder.decode(value, { stream: true });
-
-        let newlineIndex: number;
-        while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
-          let line = textBuffer.slice(0, newlineIndex);
-          textBuffer = textBuffer.slice(newlineIndex + 1);
-
-          if (line.endsWith("\r")) line = line.slice(0, -1);
-          if (line.startsWith(":") || line.trim() === "") continue;
-          if (!line.startsWith("data: ")) continue;
-
-          const jsonStr = line.slice(6).trim();
-          if (jsonStr === "[DONE]") break;
-
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content;
-            if (content) {
-              assistantContent += content;
-              updateAssistant(assistantContent);
-            }
-          } catch {
-            textBuffer = line + "\n" + textBuffer;
-            break;
-          }
-        }
+      const data = await response.json();
+      const content = data.choices?.[0]?.message?.content;
+      if (content) {
+        setMessages([...newMessages, { role: "assistant", content }]);
       }
     } catch (error) {
-      console.error("Chat error:", error);
-      toast({
-        title: language === "pt" ? "Erro" : "Error",
-        description: error instanceof Error ? error.message : "Failed to send message",
-        variant: "destructive"
-      });
+      toast({ title: pt ? "Erro" : "Error", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
-  }, [messages, buildUserProfile, language, toast, checkLimit, track]);
+  }, [messages, buildUserProfile, pt, toast, checkLimit, track, isPro]);
 
   const handleSend = () => {
     if (!input.trim() || isLoading) return;
@@ -235,102 +110,120 @@ export default function Trainer() {
     streamChat(message);
   };
 
-  const handleSuggestionClick = (suggestion: string) => {
-    if (isLoading) return;
-    streamChat(suggestion);
-  };
-
   return (
     <AppLayout>
-      <div className="flex flex-col h-[calc(100vh-140px)]">
-        {/* Header */}
-        <div className="p-4 border-b border-border/50">
-          <h1 className="text-xl font-bold text-foreground text-center">{t("trainer.title")}</h1>
-          <Alert className="border-amber-600 bg-amber-50 dark:bg-amber-950/30 mt-3">
-            <AlertTriangle className="h-4 w-4 text-amber-700 dark:text-amber-400" />
-            <AlertDescription className="text-amber-800 dark:text-amber-200 text-xs font-medium">
-              {t("trainer.disclaimer")}
-            </AlertDescription>
-          </Alert>
+      <div className="flex flex-col h-[calc(100vh-140px)] max-w-2xl mx-auto w-full">
+        {/* Header Compacto e Elegante */}
+        <div className="px-4 py-3 flex items-center justify-between glass-strong rounded-b-2xl mb-2">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full gradient-teal flex items-center justify-center shadow-glow">
+              <Sparkles className="text-white h-5 w-5" />
+            </div>
+            <div>
+              <h1 className="text-sm font-bold leading-tight">Treinador AI</h1>
+              <span className="text-[10px] text-success flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+                Online agora
+              </span>
+            </div>
+          </div>
+          <AlertCircle className="h-5 w-5 text-muted-foreground opacity-50" />
         </div>
 
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full space-y-6">
-              <p className="text-muted-foreground text-center">
-                {language === "pt" 
-                  ? "Olá! Sou seu treinador virtual. Como posso te ajudar hoje?" 
-                  : "Hi! I'm your virtual trainer. How can I help you today?"}
-              </p>
-              
-              <div className="flex flex-wrap justify-center gap-2 max-w-md">
-                {dailySuggestions.map((suggestion, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handleSuggestionClick(suggestion)}
-                    className="px-3 py-2 text-sm bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-full transition-colors border border-border"
-                  >
-                    {suggestion}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <>
-              {messages.map((message, index) => (
-                <div
+        {/* Área de Mensagens */}
+        <div className="flex-1 overflow-y-auto px-4 space-y-4 pb-4">
+          <AnimatePresence>
+            {messages.length === 0 ? (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col items-center justify-center h-full space-y-6 pt-10"
+              >
+                <div className="glass p-6 rounded-3xl text-center space-y-2 max-w-[280px]">
+                  <p className="text-sm font-medium">
+                    {pt ? "Como posso acelerar seus resultados hoje?" : "How can I boost your results today?"}
+                  </p>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2 w-full">
+                  {dailySuggestions.map((suggestion, index) => (
+                    <button
+                      key={index}
+                      onClick={() => streamChat(suggestion)}
+                      className="p-3 text-xs glass hover:bg-secondary/30 text-left rounded-2xl border border-border/50 transition-all active:scale-95"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            ) : (
+              messages.map((message, index) => (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
                   key={index}
                   className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`max-w-[85%] rounded-2xl px-4 py-2 ${
+                    className={`max-w-[85%] rounded-2xl px-4 py-3 shadow-sm ${
                       message.role === "user"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-foreground"
+                        ? "gradient-teal text-white rounded-tr-none"
+                        : "glass-strong text-foreground rounded-tl-none border-l-4 border-l-accent"
                     }`}
                   >
-                    {message.role === "assistant" ? (
-                      <div className="text-sm prose prose-sm dark:prose-invert max-w-none [&>p]:my-1 [&>ul]:my-1 [&>ol]:my-1">
-                        <ReactMarkdown>{message.content}</ReactMarkdown>
-                      </div>
-                    ) : (
-                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                    )}
+                    <div className="text-sm prose prose-sm dark:prose-invert max-w-none">
+                      <ReactMarkdown>{message.content}</ReactMarkdown>
+                    </div>
                   </div>
-                </div>
-              ))}
-              {isLoading && messages[messages.length - 1]?.role === "user" && (
-                <div className="flex justify-start">
-                  <div className="bg-muted rounded-2xl px-4 py-2">
-                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                  </div>
-                </div>
-              )}
-              <div ref={messagesEndRef} />
-            </>
+                </motion.div>
+              ))
+            )}
+          </AnimatePresence>
+          {isLoading && (
+            <div className="flex justify-start">
+              <div className="glass px-4 py-2 rounded-2xl">
+                <Loader2 className="h-4 w-4 animate-spin text-accent" />
+              </div>
+            </div>
           )}
+          <div ref={messagesEndRef} />
         </div>
 
-        {/* Input */}
-        <div className="p-4 border-t border-border/50">
+        {/* Input ou Paywall */}
+        <div className="p-4 glass-strong rounded-t-3xl border-t border-border/50">
           {limitReached ? (
-            <div className="flex items-center gap-2 justify-center text-muted-foreground text-sm py-2">
-              <Lock className="h-4 w-4" />
-              {language === "pt" ? "Limite diário atingido. Faça upgrade para continuar." : "Daily limit reached. Upgrade to continue."}
-            </div>
+            <motion.div 
+              initial={{ y: 20 }} animate={{ y: 0 }}
+              className="gradient-gold p-4 rounded-2xl text-accent-foreground text-center space-y-3"
+            >
+              <div className="flex justify-center gap-2 items-center font-bold">
+                <Crown className="h-5 w-5" />
+                {pt ? "Evolua para o Plano Pro" : "Upgrade to Pro"}
+              </div>
+              <p className="text-xs opacity-90">
+                {pt ? "Consultas ilimitadas e planos de treino exclusivos." : "Unlimited chats and exclusive workout plans."}
+              </p>
+              <Button className="w-full bg-accent-foreground text-accent hover:bg-accent-foreground/90 rounded-xl font-bold">
+                {pt ? "ASSINAR AGORA" : "SUBSCRIBE NOW"}
+              </Button>
+            </motion.div>
           ) : (
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center bg-background/50 p-1 rounded-2xl border border-border">
               <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
-                placeholder={language === "pt" ? "Digite sua pergunta..." : "Type your question..."}
-                disabled={isLoading}
-                className="flex-1"
+                onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                placeholder={pt ? "Pergunte algo..." : "Ask anything..."}
+                className="border-0 focus-visible:ring-0 bg-transparent h-12"
               />
-              <Button onClick={handleSend} disabled={!input.trim() || isLoading} size="icon" className="bg-primary text-primary-foreground hover:bg-primary/90">
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              <Button 
+                onClick={handleSend} 
+                disabled={!input.trim() || isLoading} 
+                size="icon" 
+                className="rounded-xl w-10 h-10 gradient-teal shadow-glow"
+              >
+                <Send className="h-4 w-4" />
               </Button>
             </div>
           )}
