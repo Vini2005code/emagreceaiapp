@@ -5,31 +5,41 @@ import { FastingWidget } from "@/components/dashboard/FastingWidget";
 import { DailyMissions } from "@/components/dashboard/DailyMissions";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { HealthDataCard } from "@/components/health/HealthDataCard";
-import { QuickProfileSetup } from "@/components/profile/QuickProfileSetup";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useAuth } from "@/hooks/useAuth";
 import Auth from "./Auth";
+import { Loader2 } from "lucide-react";
 
 const Index = () => {
   const { session, loading: authLoading } = useAuth();
-  const { profile, isLoading: profileLoading, refreshProfile } = useUserProfile();
+  const { isLoading: profileLoading } = useUserProfile();
 
-  if (authLoading || profileLoading) return null; // Fica em branco (carregando silenciosamente)
-
-  if (!session) return <Auth />;
-
-  if (!profile?.onboardingCompleted) {
-    return <QuickProfileSetup onComplete={refreshProfile} />;
+  // Loading silencioso ou minimalista
+  if (authLoading || profileLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
+  // Se não estiver logado, manda para o Auth (Login/Cadastro)
+  if (!session) {
+    return <Auth />;
+  }
+
+  // REMOVIDA A TRAVA: Agora ele renderiza o App direto, independente dos dados
   return (
     <AppLayout>
-      <div className="space-y-6 pb-24 px-1">
+      <div className="space-y-6 pb-24 px-1 animate-fade-in">
         <Header />
+        
+        {/* O usuário edita os dados aqui dentro, quando clicar nos cards */}
         <div className="grid gap-4 md:grid-cols-2">
           <HealthDataCard />
           <FastingWidget />
         </div>
+
         <WaterProgress />
         <DailyMissions />
         <QuickActions />
