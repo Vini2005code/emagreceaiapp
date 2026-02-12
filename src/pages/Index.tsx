@@ -1,114 +1,62 @@
-import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { QuickActions } from "@/components/dashboard/QuickActions";
-import { DailyMissions } from "@/components/dashboard/DailyMissions";
+import { Header } from "@/components/layout/Header";
 import { WaterProgress } from "@/components/dashboard/WaterProgress";
 import { FastingWidget } from "@/components/dashboard/FastingWidget";
-import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
-import { ReminderSettings } from "@/components/notifications/ReminderSettings";
+import { DailyMissions } from "@/components/dashboard/DailyMissions";
+import { QuickActions } from "@/components/dashboard/QuickActions";
 import { HealthDataCard } from "@/components/health/HealthDataCard";
-import { useLanguage } from "@/contexts/LanguageContext";
+import { QuickProfileSetup } from "@/components/profile/QuickProfileSetup";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import { useAuth } from "@/hooks/useAuth";
-import { useAnalytics } from "@/hooks/useAnalytics";
-import { supabase } from "@/integrations/supabase/client";
-import { motion } from "framer-motion";
+import Auth from "./Auth";
+import { Loader2 } from "lucide-react";
 
 const Index = () => {
-  const { t } = useLanguage();
-  const { user } = useAuth();
-  const { track } = useAnalytics();
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const { session, loading: authLoading } = useAuth();
+  const { profile, isLoading: profileLoading, refreshProfile } = useUserProfile();
 
-  useEffect(() => {
-    if (!user) return;
-    checkOnboarding();
-    track("page_view", { page: "home" });
-  }, [user]);
-
-  const checkOnboarding = async () => {
-    if (!user) return;
-    const { data } = await supabase
-      .from("profiles")
-      .select("onboarding_completed")
-      .eq("user_id", user.id)
-      .maybeSingle();
-    
-    if (data && !data.onboarding_completed) {
-      setShowOnboarding(true);
-    }
-    setLoading(false);
-  };
-
-  const handleOnboardingComplete = async () => {
-    if (!user) return;
-    await supabase
-      .from("profiles")
-      .update({ onboarding_completed: true })
-      .eq("user_id", user.id);
-    setShowOnboarding(false);
-  };
-
-  if (loading) return null;
-
-  if (showOnboarding) {
-    return <OnboardingFlow onComplete={handleOnboardingComplete} />;
+  // Estado de Carregamento Unificado
+  if (authLoading || profileLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground animate-pulse">Carregando sua experiência...</p>
+      </div>
+    );
   }
 
+  // Se não houver sessão, exibe a tela de Autenticação
+  if (!session) {
+    return <Auth />;
+  }
+
+  // Se o usuário está logado mas nunca completou o perfil (Peso/Altura)
+  // O hook useUserProfile garante que 'profile' tenha valores padrão seguros
+  if (!profile?.onboardingCompleted) {
+    return <QuickProfileSetup onComplete={refreshProfile} />;
+  }
+
+  // Dashboard Principal (Só acessível após login e setup)
   return (
-    <AppLayout subtitle={t("app.subtitle")}>
-      <div className="space-y-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center py-4"
-        >
-          <h2 className="text-2xl font-bold text-foreground mb-1">
-            {t("home.greeting")}
-          </h2>
-          <p className="text-muted-foreground">
-            {t("home.motivation")}
-          </p>
-        </motion.div>
+    <AppLayout>
+      <div className="space-y-6 pb-24 animate-fade-in px-1">
+        {/* Header com Saudação e Resumo */}
+        <Header />
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <DailyMissions />
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="grid grid-cols-1 md:grid-cols-2 gap-4"
-        >
-          <WaterProgress />
-          <FastingWidget />
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="grid grid-cols-1 md:grid-cols-2 gap-4"
-        >
-          <ReminderSettings />
+        {/* Dados Vitais e Jejum lado a lado em telas maiores */}
+        <div className="grid gap-4 md:grid-cols-2">
           <HealthDataCard />
-        </motion.div>
+          <FastingWidget />
+        </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-        >
-          <h3 className="text-lg font-bold mb-3 text-foreground">
-            {t("home.quickAccess")}
-          </h3>
-          <QuickActions />
-        </motion.div>
+        {/* Progresso de Água */}
+        <WaterProgress />
+
+        {/* Missões do Dia */}
+        <DailyMissions />
+
+        {/* Ações Rápidas */}
+        <QuickActions />
       </div>
     </AppLayout>
   );
