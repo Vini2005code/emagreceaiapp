@@ -4,9 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Loader2, Mail, Lock, User, Eye, EyeOff, CreditCard } from "lucide-react";
+import { Loader2, Mail, Lock, User, Eye, EyeOff, CreditCard, ShieldCheck } from "lucide-react";
 import { motion } from "framer-motion";
 import logo from "@/assets/logo.png";
 import { z } from "zod";
@@ -28,17 +29,18 @@ const Auth = () => {
   const [cpf, setCpf] = useState("");
   const [errors, setErrors] = useState<{ email?: string; password?: string; name?: string; cpf?: string }>({});
 
+  // Estados de Consentimento LGPD
+  const [acceptedLGPD, setAcceptedLGPD] = useState(false);
+  const [acceptedHealthData, setAcceptedHealthData] = useState(false);
+  const [acceptedAI, setAcceptedAI] = useState(false);
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session?.user) {
-        navigate("/");
-      }
+      if (session?.user) navigate("/");
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        navigate("/");
-      }
+      if (session?.user) navigate("/");
     });
 
     return () => subscription.unsubscribe();
@@ -54,26 +56,20 @@ const Auth = () => {
     try {
       emailSchema.parse(email);
     } catch (e) {
-      if (e instanceof z.ZodError) {
-        newErrors.email = e.errors[0].message;
-      }
+      if (e instanceof z.ZodError) newErrors.email = e.errors[0].message;
     }
     
     try {
       passwordSchema.parse(password);
     } catch (e) {
-      if (e instanceof z.ZodError) {
-        newErrors.password = e.errors[0].message;
-      }
+      if (e instanceof z.ZodError) newErrors.password = e.errors[0].message;
     }
     
     if (!isLogin) {
       try {
         nameSchema.parse(fullName);
       } catch (e) {
-        if (e instanceof z.ZodError) {
-          newErrors.name = e.errors[0].message;
-        }
+        if (e instanceof z.ZodError) newErrors.name = e.errors[0].message;
       }
 
       const cleanedCpf = cpf.replace(/\D/g, "");
@@ -81,6 +77,11 @@ const Auth = () => {
         newErrors.cpf = "CPF é obrigatório";
       } else if (!isValidCPF(cleanedCpf)) {
         newErrors.cpf = "CPF inválido";
+      }
+
+      if (!acceptedLGPD || !acceptedHealthData || !acceptedAI) {
+        toast.error("Você precisa aceitar os termos de privacidade e IA.");
+        return false;
       }
     }
     
@@ -90,9 +91,7 @@ const Auth = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!validateInputs()) return;
-    
     setIsLoading(true);
 
     try {
@@ -103,65 +102,41 @@ const Auth = () => {
         });
 
         if (error) {
-          if (error.message.includes("Invalid login credentials")) {
-            toast.error("Email ou senha incorretos");
-          } else {
-            toast.error(error.message);
-          }
+          toast.error(error.message.includes("Invalid login credentials") ? "Email ou senha incorretos" : error.message);
           return;
         }
 
-        toast.success("Login realizado com sucesso!");
+        toast.success("Bem-vindo de volta!");
         navigate("/");
       } else {
-        // Check if CPF is already registered
         const cleanedCpf = cpf.replace(/\D/g, "");
-        const { data: existingCpf } = await supabase
-          .from("profiles")
-          .select("cpf")
-          .eq("cpf", cleanedCpf)
-          .maybeSingle();
-
+        
+        // Verifica CPF duplicado
+        const { data: existingCpf } = await supabase.from("profiles").select("cpf").eq("cpf", cleanedCpf).maybeSingle();
         if (existingCpf) {
-          toast.error("Este CPF já está cadastrado. Faça login com sua conta existente.");
+          toast.error("Este CPF já está cadastrado.");
           setIsLogin(true);
           return;
         }
 
-        const redirectUrl = `${window.location.origin}/`;
-        
         const { error } = await supabase.auth.signUp({
           email: email.trim(),
           password,
           options: {
-            emailRedirectTo: redirectUrl,
             data: {
               full_name: fullName.trim(),
               cpf: cleanedCpf,
+              onboarding_completed: false // Marca como novo usuário para o setup inicial
             },
           },
         });
 
         if (error) {
-          if (error.message.includes("User already registered")) {
-            toast.error("Este email já está cadastrado. Faça login.");
-            setIsLogin(true);
-          } else {
-            toast.error(error.message);
-          }
+          toast.error(error.message);
           return;
         }
 
-        // Update profile with CPF after signup
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          await supabase
-            .from("profiles")
-            .update({ cpf: cleanedCpf })
-            .eq("user_id", session.user.id);
-        }
-
-        toast.success("Conta criada com sucesso! Você já pode usar o app.");
+        toast.success("Conta criada com sucesso!");
         navigate("/");
       }
     } catch (error) {
@@ -172,145 +147,84 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/30 to-background flex items-center justify-center p-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
-      >
+    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background flex items-center justify-center p-4">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md">
         <div className="text-center mb-8">
-          <img src={logo} alt="Emagrece AI" className="h-20 w-20 mx-auto mb-4 rounded-2xl" />
-          <h1 className="text-2xl font-bold">
-            Emagrece <span className="text-accent">AI</span>
-          </h1>
-          <p className="text-muted-foreground mt-2">Sua jornada de transformação começa aqui</p>
+          <img src={logo} alt="Emagrece AI" className="h-16 w-16 mx-auto mb-4 rounded-xl" />
+          <h1 className="text-2xl font-bold">Emagrece <span className="text-primary">AI</span></h1>
         </div>
 
-        <Card className="glass-card border-border/50">
+        <Card className="glass-strong border-border/50 shadow-xl">
           <CardHeader className="text-center pb-4">
-            <CardTitle className="text-xl">
-              {isLogin ? "Bem-vindo de volta" : "Criar conta"}
-            </CardTitle>
-            <CardDescription>
-              {isLogin 
-                ? "Entre com suas credenciais para continuar" 
-                : "Preencha os dados para criar sua conta"}
-            </CardDescription>
+            <CardTitle className="text-xl">{isLogin ? "Entrar" : "Criar conta"}</CardTitle>
+            <CardDescription>{isLogin ? "Acesse sua conta individual" : "Inicie sua transformação agora"}</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               {!isLogin && (
                 <>
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     <Label htmlFor="name">Nome completo</Label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="name"
-                        type="text"
-                        placeholder="Seu nome"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        className="pl-10"
-                        disabled={isLoading}
-                      />
-                    </div>
-                    {errors.name && <p className="text-destructive text-xs">{errors.name}</p>}
+                    <Input id="name" placeholder="Seu nome" value={fullName} onChange={(e) => setFullName(e.target.value)} disabled={isLoading} />
+                    {errors.name && <p className="text-destructive text-[10px]">{errors.name}</p>}
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     <Label htmlFor="cpf">CPF</Label>
-                    <div className="relative">
-                      <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="cpf"
-                        type="text"
-                        placeholder="000.000.000-00"
-                        value={cpf}
-                        onChange={(e) => handleCpfChange(e.target.value)}
-                        className="pl-10"
-                        disabled={isLoading}
-                        maxLength={14}
-                      />
-                    </div>
-                    {errors.cpf && <p className="text-destructive text-xs">{errors.cpf}</p>}
+                    <Input id="cpf" placeholder="000.000.000-00" value={cpf} onChange={(e) => handleCpfChange(e.target.value)} maxLength={14} disabled={isLoading} />
+                    {errors.cpf && <p className="text-destructive text-[10px]">{errors.cpf}</p>}
                   </div>
                 </>
               )}
 
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label htmlFor="email">Email</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10"
-                    disabled={isLoading}
-                  />
-                </div>
-                {errors.email && <p className="text-destructive text-xs">{errors.email}</p>}
+                <Input id="email" type="email" placeholder="seu@email.com" value={email} onChange={(e) => setEmail(e.target.value)} disabled={isLoading} />
+                {errors.email && <p className="text-destructive text-[10px]">{errors.email}</p>}
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label htmlFor="password">Senha</Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 pr-10"
-                    disabled={isLoading}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
+                  <Input id="password" type={showPassword ? "text" : "password"} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} disabled={isLoading} />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                {errors.password && <p className="text-destructive text-xs">{errors.password}</p>}
+                {errors.password && <p className="text-destructive text-[10px]">{errors.password}</p>}
               </div>
 
-              <Button 
-                type="submit" 
-                className="w-full" 
-                variant="cta"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {isLogin ? "Entrando..." : "Criando conta..."}
-                  </>
-                ) : (
-                  isLogin ? "Entrar" : "Criar conta"
-                )}
+              {!isLogin && (
+                <div className="space-y-3 pt-2 bg-muted/40 p-3 rounded-lg border border-border/50">
+                  <div className="flex items-start gap-2">
+                    <Checkbox id="terms" checked={acceptedLGPD} onCheckedChange={(v) => setAcceptedLGPD(!!v)} />
+                    <Label htmlFor="terms" className="text-[10px] leading-tight text-muted-foreground">
+                      Aceito os <a href="/terms" className="text-primary underline">Termos</a> e <a href="/privacy" className="text-primary underline">Privacidade</a>.
+                    </Label>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Checkbox id="health" checked={acceptedHealthData} onCheckedChange={(v) => setAcceptedHealthData(!!v)} />
+                    <Label htmlFor="health" className="text-[10px] leading-tight text-muted-foreground">
+                      Autorizo o tratamento de meus dados de saúde.
+                    </Label>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Checkbox id="ai" checked={acceptedAI} onCheckedChange={(v) => setAcceptedAI(!!v)} />
+                    <Label htmlFor="ai" className="text-[10px] leading-tight text-muted-foreground">
+                      Autorizo o processamento de dados por IA.
+                    </Label>
+                  </div>
+                </div>
+              )}
+
+              <Button type="submit" className="w-full gradient-teal h-12" disabled={isLoading}>
+                {isLoading ? <Loader2 className="animate-spin" /> : (isLogin ? "Entrar" : "Criar Minha Conta")}
               </Button>
             </form>
 
-            <div className="mt-6 text-center">
-              <button
-                onClick={() => {
-                  setIsLogin(!isLogin);
-                  setErrors({});
-                }}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                disabled={isLoading}
-              >
-                {isLogin 
-                  ? "Não tem conta? Criar agora" 
-                  : "Já tem conta? Fazer login"}
-              </button>
-            </div>
+            <button onClick={() => { setIsLogin(!isLogin); setErrors({}); }} className="w-full text-center text-xs mt-6 text-muted-foreground hover:text-primary transition-colors">
+              {isLogin ? "Não tem conta? Criar agora" : "Já tem conta? Fazer login"}
+            </button>
           </CardContent>
         </Card>
       </motion.div>
