@@ -7,7 +7,8 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { Target, ArrowRight, Loader2 } from "lucide-react";
 
 export function QuickProfileSetup({ onComplete }: { onComplete: () => void }) {
-  const { profile, updateProfile, isLoading } = useUserProfile();
+  const { profile, saveProfile } = useUserProfile();
+  const [isSaving, setIsSaving] = useState(false);
   const [data, setData] = useState({
     weight: profile.weight || "",
     height: profile.height || "",
@@ -17,14 +18,15 @@ export function QuickProfileSetup({ onComplete }: { onComplete: () => void }) {
 
   const handleSave = async () => {
     if (!data.weight || !data.height) return;
-    await updateProfile({
+    setIsSaving(true);
+    saveProfile({
       ...profile,
       weight: Number(data.weight),
       height: Number(data.height),
       age: Number(data.age),
       goalWeight: Number(data.goalWeight),
-      onboardingCompleted: true
     });
+    setIsSaving(false);
     onComplete();
   };
 
@@ -33,7 +35,7 @@ export function QuickProfileSetup({ onComplete }: { onComplete: () => void }) {
       <Card className="w-full max-w-md glass-strong border-border/50 shadow-2xl">
         <CardHeader className="text-center">
           <div className="w-14 h-14 gradient-teal rounded-full flex items-center justify-center mx-auto mb-4">
-            <Target className="text-white h-7 w-7" />
+            <Target className="text-primary-foreground h-7 w-7" />
           </div>
           <CardTitle>Configuração Rápida</CardTitle>
           <p className="text-xs text-muted-foreground mt-2">Personalize sua IA com seus dados atuais.</p>
@@ -57,8 +59,8 @@ export function QuickProfileSetup({ onComplete }: { onComplete: () => void }) {
               <Input type="number" placeholder="65" value={data.goalWeight} onChange={e => setData({...data, goalWeight: e.target.value})} className="h-12" />
             </div>
           </div>
-          <Button onClick={handleSave} className="w-full h-14 text-lg font-bold gradient-teal rounded-xl" disabled={isLoading || !data.weight || !data.height}>
-            {isLoading ? <Loader2 className="animate-spin" /> : "Ativar Meu Plano AI"}
+          <Button onClick={handleSave} className="w-full h-14 text-lg font-bold gradient-teal rounded-xl" disabled={isSaving || !data.weight || !data.height}>
+            {isSaving ? <Loader2 className="animate-spin" /> : "Ativar Meu Plano AI"}
             <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
         </CardContent>
