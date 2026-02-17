@@ -1,10 +1,9 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { Sparkles, Send, Loader2, Crown, MessageSquare, AlertCircle } from "lucide-react";
+import { Sparkles, Send, Loader2, Crown } from "lucide-react";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useAnalytics } from "@/hooks/useAnalytics";
@@ -18,7 +17,7 @@ interface Message {
 }
 
 export default function Trainer() {
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
   const { profile, calculateBMI, getBMICategory, getDietRecommendation } = useUserProfile();
   const { toast } = useToast();
   const { checkLimit, isPro } = useSubscription();
@@ -36,18 +35,13 @@ export default function Trainer() {
   const pt = language === "pt";
 
   const dailySuggestions = useMemo(() => {
-    const suggestions = pt 
-      ? ["Como perder gordura abdominal?", "Treino rápido para casa", "O que comer pré-treino?", "Dicas de jejum"]
-      : ["How to lose belly fat?", "Quick home workout", "Pre-workout meal ideas", "Fasting tips"];
-    return suggestions;
+    return pt 
+      ? ["O que comer agora?", "Treino rápido para casa", "Como acelerar resultado?", "Dicas de jejum"]
+      : ["What to eat now?", "Quick home workout", "How to speed results?", "Fasting tips"];
   }, [pt]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const buildUserProfile = useCallback(() => {
@@ -55,12 +49,19 @@ export default function Trainer() {
     return {
       weight: profile.weight,
       height: profile.height,
+      age: profile.age,
+      gender: profile.gender,
       bmi,
       bmiCategory,
       activityLevel: profile.activityLevel,
       goalWeight: profile.goalWeight,
+      bodyType: profile.bodyType,
+      foodPreferences: profile.foodPreferences,
+      medicalLimitations: profile.medicalLimitations,
+      dailyRoutine: profile.dailyRoutine,
       tdee: diet.tdee,
       calories: diet.calories,
+      deficit: diet.deficit,
     };
   }, [bmi, bmiCategory, profile, diet]);
 
@@ -89,15 +90,23 @@ export default function Trainer() {
         }),
       });
 
-      if (!response.ok) throw new Error("Falha na conexão");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        if (errorData.limit_reached) {
+          setLimitReached(true);
+          setMessages(messages); // revert
+          return;
+        }
+        throw new Error("Falha na conexão");
+      }
 
       const data = await response.json();
       const content = data.choices?.[0]?.message?.content;
       if (content) {
         setMessages([...newMessages, { role: "assistant", content }]);
       }
-    } catch (error) {
-      toast({ title: pt ? "Erro" : "Error", variant: "destructive" });
+    } catch {
+      toast({ title: pt ? "Erro ao conectar" : "Connection error", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -113,38 +122,32 @@ export default function Trainer() {
   return (
     <AppLayout>
       <div className="flex flex-col h-[calc(100vh-140px)] max-w-2xl mx-auto w-full">
-        {/* Header Compacto e Elegante */}
-        <div className="px-4 py-3 flex items-center justify-between glass-strong rounded-b-2xl mb-2">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full gradient-teal flex items-center justify-center shadow-glow">
-              <Sparkles className="text-white h-5 w-5" />
-            </div>
-            <div>
-              <h1 className="text-sm font-bold leading-tight">Treinador AI</h1>
-              <span className="text-[10px] text-success flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-                Online agora
-              </span>
-            </div>
+        {/* Header */}
+        <div className="px-4 py-3 flex items-center gap-3 glass-strong rounded-b-2xl mb-2">
+          <div className="w-10 h-10 rounded-full gradient-teal flex items-center justify-center shadow-glow">
+            <Sparkles className="text-primary-foreground h-5 w-5" />
           </div>
-          <AlertCircle className="h-5 w-5 text-muted-foreground opacity-50" />
+          <div>
+            <h1 className="text-sm font-bold leading-tight">Treinador AI</h1>
+            <span className="text-[10px] text-success flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+              Online
+            </span>
+          </div>
         </div>
 
-        {/* Área de Mensagens */}
-        <div className="flex-1 overflow-y-auto px-4 space-y-4 pb-4">
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto px-4 space-y-3 pb-4">
           <AnimatePresence>
             {messages.length === 0 ? (
               <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
                 className="flex flex-col items-center justify-center h-full space-y-6 pt-10"
               >
-                <div className="glass p-6 rounded-3xl text-center space-y-2 max-w-[280px]">
-                  <p className="text-sm font-medium">
-                    {pt ? "Como posso acelerar seus resultados hoje?" : "How can I boost your results today?"}
-                  </p>
-                </div>
-                
+                <p className="text-sm text-muted-foreground text-center">
+                  {pt ? "Como posso ajudar hoje?" : "How can I help today?"}
+                </p>
                 <div className="grid grid-cols-2 gap-2 w-full">
                   {dailySuggestions.map((suggestion, index) => (
                     <button
@@ -160,19 +163,19 @@ export default function Trainer() {
             ) : (
               messages.map((message, index) => (
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
                   key={index}
                   className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`max-w-[85%] rounded-2xl px-4 py-3 shadow-sm ${
+                    className={`max-w-[85%] px-4 py-3 shadow-sm ${
                       message.role === "user"
-                        ? "gradient-teal text-white rounded-tr-none"
-                        : "glass-strong text-foreground rounded-tl-none border-l-4 border-l-accent"
+                        ? "gradient-teal text-primary-foreground rounded-2xl rounded-br-md"
+                        : "glass-strong text-foreground rounded-2xl rounded-bl-md border border-accent/30"
                     }`}
                   >
-                    <div className="text-sm prose prose-sm dark:prose-invert max-w-none">
+                    <div className="text-sm prose prose-sm dark:prose-invert max-w-none [&>p]:mb-1.5 [&>p:last-child]:mb-0">
                       <ReactMarkdown>{message.content}</ReactMarkdown>
                     </div>
                   </div>
@@ -182,30 +185,36 @@ export default function Trainer() {
           </AnimatePresence>
           {isLoading && (
             <div className="flex justify-start">
-              <div className="glass px-4 py-2 rounded-2xl">
-                <Loader2 className="h-4 w-4 animate-spin text-accent" />
+              <div className="glass-strong px-4 py-3 rounded-2xl rounded-bl-md border border-accent/30">
+                <div className="flex gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
               </div>
             </div>
           )}
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input ou Paywall */}
+        {/* Input or Paywall */}
         <div className="p-4 glass-strong rounded-t-3xl border-t border-border/50">
           {limitReached ? (
             <motion.div 
-              initial={{ y: 20 }} animate={{ y: 0 }}
-              className="gradient-gold p-4 rounded-2xl text-accent-foreground text-center space-y-3"
+              initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+              className="p-5 rounded-2xl text-center space-y-3 border border-accent/40 relative overflow-hidden"
+              style={{ background: "linear-gradient(135deg, hsl(42, 90%, 55% / 0.15), hsl(38, 85%, 58% / 0.08))" }}
             >
-              <div className="flex justify-center gap-2 items-center font-bold">
+              <div className="absolute inset-0 animate-glow rounded-2xl pointer-events-none" />
+              <div className="flex justify-center gap-2 items-center font-bold text-accent">
                 <Crown className="h-5 w-5" />
-                {pt ? "Evolua para o Plano Pro" : "Upgrade to Pro"}
+                Evolua para o Plano Pro
               </div>
-              <p className="text-xs opacity-90">
-                {pt ? "Consultas ilimitadas e planos de treino exclusivos." : "Unlimited chats and exclusive workout plans."}
+              <p className="text-xs text-muted-foreground">
+                Consultas ilimitadas ao Treinador AI, relatórios personalizados e cardápios exclusivos.
               </p>
-              <Button className="w-full bg-accent-foreground text-accent hover:bg-accent-foreground/90 rounded-xl font-bold">
-                {pt ? "ASSINAR AGORA" : "SUBSCRIBE NOW"}
+              <Button className="w-full gradient-accent font-bold rounded-xl shadow-gold text-accent-foreground">
+                ASSINAR AGORA
               </Button>
             </motion.div>
           ) : (
