@@ -1,22 +1,17 @@
-import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Droplets, Plus, Minus } from "lucide-react";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useDailyData } from "@/contexts/DailyDataContext";
+import { useUserProfile } from "@/hooks/useUserProfile";
 
-interface WaterProgressProps {
-  targetMl?: number;
-}
-
-export function WaterProgress({ targetMl = 2500 }: WaterProgressProps) {
+export function WaterProgress() {
   const { t } = useLanguage();
-  const [currentMl, setCurrentMl] = useState(800);
-  const percentage = Math.min((currentMl / targetMl) * 100, 100);
-
-  const addWater = (amount: number) => {
-    setCurrentMl((prev) => Math.max(0, Math.min(prev + amount, targetMl + 500)));
-  };
+  const { waterMl, addWater } = useDailyData();
+  const { profile } = useUserProfile();
+  const targetMl = Math.round(profile.weight * 35) || 2500;
+  const percentage = Math.min((waterMl / targetMl) * 100, 100);
 
   return (
     <Card variant="elevated">
@@ -41,7 +36,7 @@ export function WaterProgress({ targetMl = 2500 }: WaterProgressProps) {
           </div>
           <div className="flex-1">
             <div className="text-3xl font-bold text-foreground">
-              {(currentMl / 1000).toFixed(1)}L
+              {(waterMl / 1000).toFixed(1)}L
             </div>
             <p className="text-sm text-muted-foreground">
               {t("water.of")} {(targetMl / 1000).toFixed(1)}L
@@ -51,7 +46,7 @@ export function WaterProgress({ targetMl = 2500 }: WaterProgressProps) {
                 size="sm"
                 variant="outline"
                 onClick={() => addWater(-250)}
-                disabled={currentMl <= 0}
+                disabled={waterMl <= 0}
               >
                 <Minus className="h-4 w-4" />
               </Button>

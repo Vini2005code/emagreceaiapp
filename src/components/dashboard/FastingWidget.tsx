@@ -1,32 +1,20 @@
-import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Timer, Play, Pause } from "lucide-react";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useDailyData } from "@/contexts/DailyDataContext";
 
 export function FastingWidget() {
   const navigate = useNavigate();
   const { t } = useLanguage();
-  const [isActive, setIsActive] = useState(false);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const targetHours = 16;
-  const targetSeconds = targetHours * 60 * 60;
+  const { fastingActive, fastingElapsed, fastingProtocol, toggleFasting } = useDailyData();
 
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isActive) {
-      interval = setInterval(() => {
-        setElapsedSeconds((prev) => prev + 1);
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isActive]);
-
-  const progress = Math.min((elapsedSeconds / targetSeconds) * 100, 100);
-  const hours = Math.floor(elapsedSeconds / 3600);
-  const minutes = Math.floor((elapsedSeconds % 3600) / 60);
+  const targetSeconds = fastingProtocol * 60 * 60;
+  const progress = Math.min((fastingElapsed / targetSeconds) * 100, 100);
+  const hours = Math.floor(fastingElapsed / 3600);
+  const minutes = Math.floor((fastingElapsed % 3600) / 60);
 
   const formatTime = (h: number, m: number) =>
     `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
@@ -70,18 +58,18 @@ export function FastingWidget() {
               {formatTime(hours, minutes)}
             </p>
             <p className="text-xs text-muted-foreground">
-              {t("dashboard.goal")}: {targetHours}h • {isActive ? t("fasting.inProgress") : t("fasting.paused")}
+              {t("dashboard.goal")}: {fastingProtocol}h • {fastingActive ? t("fasting.inProgress") : t("fasting.paused")}
             </p>
           </div>
           <Button
             size="icon"
-            variant={isActive ? "outline" : "default"}
+            variant={fastingActive ? "outline" : "default"}
             onClick={(e) => {
               e.stopPropagation();
-              setIsActive(!isActive);
+              toggleFasting();
             }}
           >
-            {isActive ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+            {fastingActive ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
           </Button>
         </div>
       </CardContent>
