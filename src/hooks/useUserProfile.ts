@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 export interface UserProfile {
   name: string;
@@ -33,16 +33,43 @@ export function useUserProfile() {
     const saved = localStorage.getItem("userProfile");
     if (saved) {
       const parsed = JSON.parse(saved);
-      // Merge with defaults for new fields
       return { ...defaultProfile, ...parsed };
     }
     return defaultProfile;
   });
 
-  const saveProfile = (newProfile: UserProfile) => {
+  // Cross-component sync: listen for storage events from other instances
+  useEffect(() => {
+    const handler = (e: StorageEvent) => {
+      if (e.key === "userProfile" && e.newValue) {
+        try {
+          setProfile(prev => ({ ...defaultProfile, ...JSON.parse(e.newValue!) }));
+        } catch { /* ignore */ }
+      }
+    };
+    // Also listen for custom events (same-tab broadcast)
+    const customHandler = () => {
+      const saved = localStorage.getItem("userProfile");
+      if (saved) {
+        try {
+          setProfile(prev => ({ ...defaultProfile, ...JSON.parse(saved) }));
+        } catch { /* ignore */ }
+      }
+    };
+    window.addEventListener("storage", handler);
+    window.addEventListener("userProfileUpdated", customHandler);
+    return () => {
+      window.removeEventListener("storage", handler);
+      window.removeEventListener("userProfileUpdated", customHandler);
+    };
+  }, []);
+
+  const saveProfile = useCallback((newProfile: UserProfile) => {
     setProfile(newProfile);
     localStorage.setItem("userProfile", JSON.stringify(newProfile));
-  };
+    // Broadcast to other components in the same tab
+    window.dispatchEvent(new Event("userProfileUpdated"));
+  }, []);
 
   const calculateBMI = (): number => {
     if (!profile.height || !profile.weight) return 0;

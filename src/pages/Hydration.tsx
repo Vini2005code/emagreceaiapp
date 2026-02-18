@@ -1,30 +1,20 @@
-import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Droplets, Plus, Minus, Target, TrendingUp } from "lucide-react";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useDailyData } from "@/contexts/DailyDataContext";
+import { useUserProfile } from "@/hooks/useUserProfile";
 
 const quickAddOptions = [150, 250, 500, 750];
 
 const Hydration = () => {
-  const { t } = useLanguage();
-  const [weight, setWeight] = useState(70);
-  const [currentMl, setCurrentMl] = useState(0);
-  const targetMl = Math.round(weight * 35);
-  const percentage = Math.min((currentMl / targetMl) * 100, 100);
-
-  const addWater = (amount: number) => {
-    setCurrentMl((prev) => Math.max(0, prev + amount));
-  };
-
-  const waterLogs = [
-    { time: "07:30", amount: 250 },
-    { time: "09:15", amount: 200 },
-    { time: "11:00", amount: 350 },
-  ];
+  const { t, language } = useLanguage();
+  const { waterMl, waterLogs, addWater } = useDailyData();
+  const { profile } = useUserProfile();
+  const targetMl = Math.round(profile.weight * 35) || 2500;
+  const percentage = Math.min((waterMl / targetMl) * 100, 100);
 
   return (
     <AppLayout title={t("water.title")} subtitle={t("water.subtitle")}>
@@ -50,7 +40,7 @@ const Hydration = () => {
               </div>
 
               <p className="text-5xl font-bold text-primary-foreground mb-1">
-                {(currentMl / 1000).toFixed(1)}L
+                {(waterMl / 1000).toFixed(1)}L
               </p>
               <p className="text-primary-foreground/80">
                 {t("water.of")} {(targetMl / 1000).toFixed(1)}L ({percentage.toFixed(0)}%)
@@ -74,7 +64,7 @@ const Hydration = () => {
                   variant="glass"
                   size="icon"
                   onClick={() => addWater(-100)}
-                  disabled={currentMl <= 0}
+                  disabled={waterMl <= 0}
                 >
                   <Minus className="h-5 w-5" />
                 </Button>
@@ -102,15 +92,8 @@ const Hydration = () => {
               {t("water.weightTip")}
             </p>
             <div className="flex gap-3 items-center">
-              <Input
-                type="number"
-                value={weight}
-                onChange={(e) => setWeight(Number(e.target.value))}
-                className="w-24"
-                min={30}
-                max={200}
-              />
-              <span className="text-muted-foreground">kg</span>
+              <span className="text-foreground font-semibold">{profile.weight} kg</span>
+              <span className="text-muted-foreground">→</span>
               <span className="text-foreground font-semibold ml-auto">
                 {t("dashboard.goal")}: {(targetMl / 1000).toFixed(1)}L
               </span>
@@ -127,21 +110,27 @@ const Hydration = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {waterLogs.map((log, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="flex items-center justify-between py-2 border-b border-border last:border-0"
-                >
-                  <span className="text-muted-foreground">{log.time}</span>
-                  <span className="font-semibold text-foreground flex items-center gap-1">
-                    <Droplets className="h-4 w-4 text-primary" />
-                    {log.amount}ml
-                  </span>
-                </motion.div>
-              ))}
+              {waterLogs.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  {language === "pt" ? "Nenhum registro ainda hoje" : "No logs yet today"}
+                </p>
+              ) : (
+                waterLogs.map((log, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="flex items-center justify-between py-2 border-b border-border last:border-0"
+                  >
+                    <span className="text-muted-foreground">{log.time}</span>
+                    <span className="font-semibold text-foreground flex items-center gap-1">
+                      <Droplets className="h-4 w-4 text-primary" />
+                      {log.amount}ml
+                    </span>
+                  </motion.div>
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
