@@ -112,11 +112,10 @@ export default function Trainer() {
   }, [messages, isLoading, checkLimit, isPro, profile, bmi, getBMICategory, diet, logUsage, pt, toast, track]);
 
   return (
-    // Escondemos o nav principal do layout para criarmos a nossa grelha 100% controlada
-    <AppLayout hideNav={true} title={pt ? "Treinador AI" : "AI Trainer"}>
+    <AppLayout title={pt ? "Treinador AI" : "AI Trainer"} chatMode>
       
-      {/* Container Principal: Define a altura total entre o cabeçalho (aprox 64px) e a base */}
-      <div className="flex flex-col h-[calc(100vh-80px)] w-full max-w-2xl mx-auto overflow-hidden">
+      {/* Container Principal: altura entre Header (~64px) e BottomNav (~65px) */}
+      <div className="flex flex-col h-[calc(100vh-129px)] w-full max-w-2xl mx-auto overflow-hidden">
         
         {/* Status Bar */}
         <div className="px-4 py-3 shrink-0 flex items-center gap-2 bg-background z-10 border-b border-border/40">
