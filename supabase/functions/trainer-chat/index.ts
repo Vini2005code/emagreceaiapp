@@ -151,7 +151,7 @@ ${profileContext}`;
           { role: "system", content: systemPrompt },
           ...messages.slice(-20),
         ],
-        stream: true,
+        stream: false,
         temperature: 0.7,
       }),
     });
@@ -191,6 +191,9 @@ ${profileContext}`;
       });
     }
 
+    // Parse and return JSON response
+    const aiData = await response.json();
+
     // Log success
     if (userId) {
       const adminClient = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
@@ -203,8 +206,8 @@ ${profileContext}`;
       });
     }
 
-    return new Response(response.body, {
-      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+    return new Response(JSON.stringify(aiData), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
     console.error(`[${FUNCTION_NAME}] Error:`, error);
