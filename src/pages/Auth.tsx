@@ -71,33 +71,10 @@ const Auth = () => {
 
         const cleanCpf = cpf.replace(/\D/g, "");
 
-        // Check duplicate CPF before attempting signup
-        const { data: existingUser } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("cpf", cleanCpf)
-          .maybeSingle();
-
-        if (existingUser) {
-          toast.error("CPF já cadastrado. Se você já tem conta, faça login.");
-          setIsLogin(true);
-          setIsLoading(false);
-          return;
-        }
-
-        // Check duplicate email
-        const { data: existingEmail } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("email", email.trim().toLowerCase())
-          .maybeSingle();
-
-        if (existingEmail) {
-          toast.error("E-mail já cadastrado. Faça login ou recupere sua senha.");
-          setIsLogin(true);
-          setIsLoading(false);
-          return;
-        }
+        // NOTE: Duplicate CPF/email checks are intentionally NOT done client-side
+        // to prevent user enumeration attacks (security finding: user_enumeration).
+        // Duplicates are enforced by DB UNIQUE constraints and Supabase Auth,
+        // and surfaced via generic error messages in the catch block below.
 
         const { error } = await supabase.auth.signUp({
           email: email.trim(),
@@ -116,15 +93,21 @@ const Auth = () => {
       }
     } catch (error: any) {
       const msg: string = error?.message || "";
+      const code: string = error?.code || "";
       if (msg.includes("Invalid login") || msg.includes("invalid_credentials")) {
         toast.error("Credenciais inválidas. Verifique seu e-mail e senha.");
       } else if (msg.includes("User already registered") || msg.includes("already been registered")) {
-        toast.error("E-mail já cadastrado. Faça login.");
+        // Generic message — do not reveal whether CPF or email caused the conflict
+        toast.error("Já existe uma conta com esses dados. Tente fazer login.");
         setIsLogin(true);
       } else if (msg.includes("Email not confirmed")) {
         toast.error("Confirme seu e-mail antes de entrar.");
+      } else if (code === "23505" || msg.includes("duplicate key") || msg.includes("unique")) {
+        // DB unique constraint violation (e.g. duplicate CPF) — generic message
+        toast.error("Já existe uma conta com esses dados. Tente fazer login.");
+        setIsLogin(true);
       } else {
-        toast.error(msg || "Ocorreu um erro. Tente novamente.");
+        toast.error("Ocorreu um erro ao processar seu cadastro. Tente novamente.");
       }
     } finally {
       setIsLoading(false);
