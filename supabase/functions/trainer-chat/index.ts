@@ -30,27 +30,36 @@ serve(async (req) => {
       });
     }
 
-    // --- Rate Limiting ---
+    // --- Authentication (required) ---
     const authHeader = req.headers.get("authorization");
-    let userId: string | null = null;
-    if (authHeader) {
-      const supabase = createClient(
-        Deno.env.get("SUPABASE_URL") ?? "",
-        Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-        { global: { headers: { Authorization: authHeader } } }
-      );
-      const { data: { user } } = await supabase.auth.getUser();
-      userId = user?.id ?? null;
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-      if (userId) {
-        // Check daily limit
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        const adminClient = createClient(
-          Deno.env.get("SUPABASE_URL") ?? "",
-          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-        );
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      { global: { headers: { Authorization: authHeader } } }
+    );
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: "Invalid authentication" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const userId = user.id;
+
+    // --- Rate Limiting ---
+    {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const adminClient = createClient(
+        Deno.env.get("SUPABASE_URL") ?? "",
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+      );
 
         // Get user plan limits
         const { data: sub } = await adminClient
@@ -83,7 +92,6 @@ serve(async (req) => {
             status: 429,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
-        }
       }
     }
 

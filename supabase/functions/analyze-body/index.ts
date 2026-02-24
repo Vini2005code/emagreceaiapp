@@ -1,9 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+const FUNCTION_NAME = "analyze-body";
 
 interface BodyAnalysisRequest {
   beforeImageBase64?: string;
@@ -24,7 +27,51 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startTime = Date.now();
+
   try {
+    // --- Authentication ---
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      { global: { headers: { Authorization: authHeader } } }
+    );
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: "Invalid authentication" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // --- Rate Limiting ---
+    const adminClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const { data: sub } = await adminClient.from("user_subscriptions").select("plan_id").eq("user_id", user.id).maybeSingle();
+    const planId = sub?.plan_id || "free";
+    const { data: plan } = await adminClient.from("subscription_plans").select("scanner_daily_limit").eq("id", planId).maybeSingle();
+    const dailyLimit = plan?.scanner_daily_limit || 3;
+
+    const { count } = await adminClient.from("ai_usage_logs").select("id", { count: "exact", head: true })
+      .eq("user_id", user.id).eq("function_name", FUNCTION_NAME).gte("created_at", today.toISOString());
+
+    if ((count || 0) >= dailyLimit) {
+      return new Response(JSON.stringify({ error: "Limite diário atingido. Faça upgrade do seu plano.", limit_reached: true }), {
+        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { beforeImageBase64, afterImageBase64, currentImageBase64, userProfile, previousAnalysis }: BodyAnalysisRequest = await req.json();
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -250,6 +297,14 @@ Gere um relatório completo e motivacional.
     console.log("AI Response (cleaned):", cleanContent.substring(0, 500));
     
     const parsed = JSON.parse(cleanContent);
+
+    // Log successful usage
+    await adminClient.from("ai_usage_logs").insert({
+      user_id: user.id,
+      function_name: FUNCTION_NAME,
+      success: true,
+      response_time_ms: Date.now() - startTime,
+    });
 
     return new Response(
       JSON.stringify(parsed),
