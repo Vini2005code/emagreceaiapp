@@ -1,4 +1,5 @@
 import { AppLayout } from "@/components/layout/AppLayout";
+import { PageTransition } from "@/components/layout/PageTransition";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Droplets, Plus, Minus, Target, TrendingUp } from "lucide-react";
@@ -18,6 +19,7 @@ const Hydration = () => {
 
   return (
     <AppLayout title={t("water.title")} subtitle={t("water.subtitle")}>
+      <PageTransition>
       <div className="space-y-6">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
@@ -111,9 +113,12 @@ const Hydration = () => {
           <CardContent>
             <div className="space-y-2">
               {waterLogs.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  {language === "pt" ? "Nenhum registro ainda hoje" : "No logs yet today"}
-                </p>
+                <div className="text-center py-8 space-y-2">
+                  <Droplets className="h-10 w-10 mx-auto text-muted-foreground/40" />
+                  <p className="text-sm text-muted-foreground">
+                    {language === "pt" ? "Nenhum registro hoje. Que tal começar agora? 💧" : "No logs yet today. How about starting now? 💧"}
+                  </p>
+                </div>
               ) : (
                 waterLogs.map((log, index) => (
                   <motion.div
@@ -135,6 +140,7 @@ const Hydration = () => {
           </CardContent>
         </Card>
       </div>
+      </PageTransition>
     </AppLayout>
   );
 };

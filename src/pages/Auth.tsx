@@ -159,6 +159,14 @@ const Auth = () => {
                 </button>
               </div>
 
+              {isLogin && (
+                <div className="text-right -mt-1">
+                  <a href="/forgot-password" className="text-[11px] text-muted-foreground hover:text-primary transition-colors underline decoration-dotted">
+                    Esqueci minha senha
+                  </a>
+                </div>
+              )}
+
               {/* LGPD Consent - Signup Only */}
               {!isLogin && (
                 <div className="space-y-3 pt-2 px-1 border-t border-border/30 mt-2">
