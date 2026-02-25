@@ -187,6 +187,9 @@ const Scanner = () => {
                 <div>
                   <h3 className="font-semibold text-lg mb-2">{t("scanner.uploadTitle")}</h3>
                   <p className="text-muted-foreground text-sm">{t("scanner.uploadDesc")}</p>
+                  <p className="text-xs text-muted-foreground/60 mt-2">
+                    {pt ? "Nenhum alimento escaneado ainda. Que tal começar agora? 📸" : "No food scanned yet. How about starting now? 📸"}
+                  </p>
                 </div>
                 <div className="flex flex-col gap-3">
                   <Button onClick={() => fileInputRef.current?.click()} size="lg" className="gap-2">

@@ -32,7 +32,7 @@ const translations = {
     
     // Profile/BMI
     "profile.title": "Meu Perfil",
-    "profile.subtitle": "Configure seu perfil para recomendações personalizadas",
+    "profile.subtitle": "Complete seu perfil para dicas exclusivas da IA 🚀",
     "profile.name": "Nome",
     "profile.age": "Idade",
     "profile.weight": "Peso (kg)",
@@ -331,7 +331,7 @@ const translations = {
     
     // Profile/BMI
     "profile.title": "My Profile",
-    "profile.subtitle": "Set up your profile for personalized recommendations",
+    "profile.subtitle": "Personalize your experience with AI 🚀",
     "profile.name": "Name",
     "profile.age": "Age",
     "profile.weight": "Weight (kg)",
